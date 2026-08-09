@@ -1,0 +1,114 @@
+# ==========================================
+# Heimdall Git Ignore
+# ==========================================
+
+# ------------------------------
+# Node / Frontend
+# ------------------------------
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Package manager logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ------------------------------
+# Tauri / Rust
+# ------------------------------
+src-tauri/target/
+target/
+
+# ------------------------------
+# Python
+# ------------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+
+.venv/
+venv/
+env/
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+*.egg-info/
+build/
+*.whl
+
+# ------------------------------
+# Environment / Secrets
+# ------------------------------
+.env
+.env.*
+!.env.example
+
+*.pem
+*.key
+credentials.json
+
+# ------------------------------
+# Databases
+# ------------------------------
+*.db
+*.sqlite
+*.sqlite3
+
+# ------------------------------
+# Assessment Data
+# ------------------------------
+Assessments/
+assessment-data/
+workspaces/
+
+# ------------------------------
+# Logs
+# ------------------------------
+*.log
+
+logs/
+
+# ------------------------------
+# Temporary Files
+# ------------------------------
+tmp/
+temp/
+
+# ------------------------------
+# IDE
+# ------------------------------
+.vscode/*
+!.vscode/extensions.json
+
+.idea/
+
+# ------------------------------
+# OS
+# ------------------------------
+.DS_Store
+Thumbs.db
+
+# Windows
+Desktop.ini
+
+# ------------------------------
+# Python coverage
+# ------------------------------
+.coverage
+htmlcov/
+.pytest_cache/
+
+# ------------------------------
+# Build / Packaging
+# ------------------------------
+*.exe
+*.msi
+*.dmg
+*.deb
+*.AppImage
