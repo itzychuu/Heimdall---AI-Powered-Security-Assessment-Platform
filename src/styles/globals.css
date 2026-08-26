@@ -120,3 +120,90 @@ nav {
   margin: 0;
   color: var(--color-text-secondary);
 }
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-panel);
+
+  padding: 20px;
+
+  min-width: 0;
+}
+
+.metric-card {
+  padding: 18px;
+  min-height: 130px;
+}
+
+.metric-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.metric-label {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.metric-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 32px;
+  height: 32px;
+
+  color: var(--color-gold);
+}
+
+.metric-value {
+  margin-top: 12px;
+
+  color: var(--color-text-primary);
+
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.metric-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-top: 12px;
+
+  font-size: 12px;
+}
+
+.metric-description {
+  color: var(--color-text-muted);
+}
+
+.metric-trend {
+  font-weight: 500;
+}
+
+.metric-trend.positive {
+  color: var(--color-success);
+}
+
+.metric-trend.negative {
+  color: var(--color-danger);
+}
+
+.metric-grid {
+  display: grid;
+
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+
+  gap: 14px;
+
+  margin-top: 24px;
+}
