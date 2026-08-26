@@ -1,0 +1,46 @@
+:root {
+  /* ========================================
+     HEIMDALL OBSIDIAN
+     ======================================== */
+
+  /* Backgrounds */
+  --color-bg: #0A0A09;
+  --color-surface: #11110F;
+  --color-surface-elevated: #171716;
+  --color-surface-hover: #1D1C1A;
+
+  /* Borders */
+  --color-border: #2B2925;
+  --color-border-subtle: #211F1C;
+
+  /* Brand */
+  --color-gold: #C9A45C;
+  --color-gold-light: #E0C27A;
+  --color-gold-dark: #8F713B;
+
+  /* Text */
+  --color-text-primary: #F1EDE4;
+  --color-text-secondary: #B8B1A5;
+  --color-text-muted: #716C63;
+
+  /* Status */
+  --color-success: #34D399;
+  --color-warning: #EAB308;
+  --color-danger: #EF4444;
+  --color-info: #60A5FA;
+
+  /* Typography */
+  --font-sans: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+
+  /* Layout */
+  --sidebar-width: 220px;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  /* Shadows */
+  --shadow-panel: 0 8px 30px rgba(0, 0, 0, 0.25);
+}
