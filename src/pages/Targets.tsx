@@ -5,7 +5,7 @@ import type {
   TargetType,
 } from "../types/target";
 
-const targets: Target[] = [
+const initialTargets: Target[] = [
   {
     id: "target-001",
     name: "https://shop.example.com",
@@ -83,6 +83,15 @@ const targetStatuses: Array<"All statuses" | TargetStatus> = [
   "Inactive",
 ];
 
+const projects = [
+  "E-Commerce Platform",
+  "Internal Infrastructure",
+  "Mobile Banking App",
+  "Cloud Environment",
+  "Legacy System Audit",
+  "API Security Assessment",
+];
+
 function TargetIcon({ type }: { type: TargetType }) {
   return (
     <div className="target-icon" aria-hidden="true">
@@ -96,19 +105,208 @@ function TargetIcon({ type }: { type: TargetType }) {
 
 function StatusIndicator({ status }: { status: TargetStatus }) {
   return (
-    <span className={`target-status target-status-${status.toLowerCase()}`}>
+    <span
+      className={`target-status target-status-${status.toLowerCase()}`}
+    >
       <span className="target-status-dot" />
       {status}
     </span>
   );
 }
 
+interface AddTargetModalProps {
+  onClose: () => void;
+  onCreate: (target: Target) => void;
+}
+
+function AddTargetModal({
+  onClose,
+  onCreate,
+}: AddTargetModalProps) {
+  const [name, setName] = useState("");
+  const [type, setType] = useState<TargetType>("Web Application");
+  const [project, setProject] = useState(projects[0]);
+  const [error, setError] = useState("");
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const trimmedName = name.trim();
+
+    if (!trimmedName) {
+      setError("Target address is required.");
+      return;
+    }
+
+    const target: Target = {
+      id: `target-${Date.now()}`,
+      name: trimmedName,
+      type,
+      project,
+      findings: 0,
+      critical: 0,
+      lastScanned: "Never",
+      status: "Active",
+    };
+
+    onCreate(target);
+  }
+
+  return (
+    <div
+      className="modal-overlay"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-target-title"
+      >
+        <div className="modal-header">
+          <div>
+            <h2 id="add-target-title">Add Target</h2>
+            <p>
+              Add an asset to your security assessment workspace.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            className="modal-close"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div className="modal-body">
+            <div className="form-field">
+              <label htmlFor="target-name">
+                Target Address
+                <span className="required">*</span>
+              </label>
+
+              <input
+                id="target-name"
+                type="text"
+                value={name}
+                onChange={(event) => {
+                  setName(event.target.value);
+                  if (error) {
+                    setError("");
+                  }
+                }}
+                placeholder="https://example.com"
+                autoFocus
+              />
+
+              <span className="form-hint">
+                Enter a URL, hostname, IP address, or network range.
+              </span>
+
+              {error && (
+                <span className="form-error">
+                  {error}
+                </span>
+              )}
+            </div>
+
+            <div className="form-row">
+              <div className="form-field">
+                <label htmlFor="target-type">
+                  Target Type
+                </label>
+
+                <select
+                  id="target-type"
+                  value={type}
+                  onChange={(event) =>
+                    setType(event.target.value as TargetType)
+                  }
+                >
+                  {targetTypes
+                    .filter(
+                      (targetType) => targetType !== "All types",
+                    )
+                    .map((targetType) => (
+                      <option
+                        key={targetType}
+                        value={targetType}
+                      >
+                        {targetType}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div className="form-field">
+                <label htmlFor="target-project">
+                  Project
+                </label>
+
+                <select
+                  id="target-project"
+                  value={project}
+                  onChange={(event) =>
+                    setProject(event.target.value)
+                  }
+                >
+                  {projects.map((projectName) => (
+                    <option
+                      key={projectName}
+                      value={projectName}
+                    >
+                      {projectName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="modal-footer">
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={onClose}
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              className="primary-button"
+            >
+              Add Target
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function Targets() {
+  const [targets, setTargets] = useState<Target[]>(initialTargets);
+
   const [search, setSearch] = useState("");
+
   const [typeFilter, setTypeFilter] =
     useState<"All types" | TargetType>("All types");
+
   const [statusFilter, setStatusFilter] =
     useState<"All statuses" | TargetStatus>("All statuses");
+
+  const [isAddTargetOpen, setIsAddTargetOpen] =
+    useState(false);
 
   const filteredTargets = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -121,25 +319,46 @@ export default function Targets() {
         target.type.toLowerCase().includes(query);
 
       const matchesType =
-        typeFilter === "All types" || target.type === typeFilter;
+        typeFilter === "All types" ||
+        target.type === typeFilter;
 
       const matchesStatus =
         statusFilter === "All statuses" ||
         target.status === statusFilter;
 
-      return matchesSearch && matchesType && matchesStatus;
+      return (
+        matchesSearch &&
+        matchesType &&
+        matchesStatus
+      );
     });
-  }, [search, typeFilter, statusFilter]);
+  }, [targets, search, typeFilter, statusFilter]);
+
+  function handleCreateTarget(target: Target) {
+    setTargets((currentTargets) => [
+      target,
+      ...currentTargets,
+    ]);
+
+    setIsAddTargetOpen(false);
+  }
 
   return (
     <div className="page targets-page">
       <div className="page-header">
         <div>
           <h1>Targets</h1>
-          <p>Manage the assets included in your security assessments.</p>
+
+          <p>
+            Manage the assets included in your security
+            assessments.
+          </p>
         </div>
 
-        <button className="primary-button">
+        <button
+          className="primary-button"
+          onClick={() => setIsAddTargetOpen(true)}
+        >
           <span>+</span>
           Add Target
         </button>
@@ -148,12 +367,16 @@ export default function Targets() {
       <section className="card targets-card">
         <div className="targets-toolbar">
           <div className="search-wrapper">
-            <span className="search-icon">⌕</span>
+            <span className="search-icon" aria-hidden="true">
+              ⌕
+            </span>
 
             <input
               type="text"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) =>
+                setSearch(event.target.value)
+              }
               placeholder="Search targets..."
               aria-label="Search targets"
             />
@@ -164,7 +387,9 @@ export default function Targets() {
               value={typeFilter}
               onChange={(event) =>
                 setTypeFilter(
-                  event.target.value as "All types" | TargetType,
+                  event.target.value as
+                    | "All types"
+                    | TargetType,
                 )
               }
               aria-label="Filter by target type"
@@ -180,7 +405,9 @@ export default function Targets() {
               value={statusFilter}
               onChange={(event) =>
                 setStatusFilter(
-                  event.target.value as "All statuses" | TargetStatus,
+                  event.target.value as
+                    | "All statuses"
+                    | TargetStatus,
                 )
               }
               aria-label="Filter by target status"
@@ -259,7 +486,9 @@ export default function Targets() {
                   </td>
 
                   <td>
-                    <StatusIndicator status={target.status} />
+                    <StatusIndicator
+                      status={target.status}
+                    />
                   </td>
 
                   <td>
@@ -283,10 +512,20 @@ export default function Targets() {
                 <tr>
                   <td colSpan={8}>
                     <div className="empty-state">
-                      <div className="empty-state-icon">⌕</div>
-                      <strong>No targets found</strong>
+                      <div
+                        className="empty-state-icon"
+                        aria-hidden="true"
+                      >
+                        ⌕
+                      </div>
+
+                      <strong>
+                        No targets found
+                      </strong>
+
                       <span>
-                        Try changing your search or filters.
+                        Try changing your search or
+                        filters.
                       </span>
                     </div>
                   </td>
@@ -298,24 +537,41 @@ export default function Targets() {
 
         <div className="targets-footer">
           <span>
-            Showing {filteredTargets.length} of {targets.length} targets
+            Showing {filteredTargets.length} of{" "}
+            {targets.length} targets
           </span>
 
           <div className="pagination">
-            <button disabled aria-label="Previous page">
+            <button
+              disabled
+              aria-label="Previous page"
+            >
               ←
             </button>
 
-            <button className="active" aria-current="page">
+            <button
+              className="active"
+              aria-current="page"
+            >
               1
             </button>
 
-            <button disabled aria-label="Next page">
+            <button
+              disabled
+              aria-label="Next page"
+            >
               →
             </button>
           </div>
         </div>
       </section>
+
+      {isAddTargetOpen && (
+        <AddTargetModal
+          onClose={() => setIsAddTargetOpen(false)}
+          onCreate={handleCreateTarget}
+        />
+      )}
     </div>
   );
 }
