@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
 import ProjectDetails from "./pages/ProjectDetails";
 import Targets from "./pages/Targets";
+import TargetDetails from "./pages/TargetDetails";
 import Scans from "./pages/Scans";
 import Findings from "./pages/Findings";
 import Tools from "./pages/Tools";
@@ -25,6 +26,7 @@ function App() {
             element={<ProjectDetails />}
           />
           <Route path="/targets" element={<Targets />} />
+          <Route path="/targets/:targetId" element={<TargetDetails />} />
           <Route path="/scans" element={<Scans />} />
           <Route path="/findings" element={<Findings />} />
           <Route path="/tools" element={<Tools />} />

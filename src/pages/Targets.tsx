@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type {
   Target,
   TargetStatus,
@@ -295,6 +296,8 @@ function AddTargetModal({
 }
 
 export default function Targets() {
+  const navigate = useNavigate();
+
   const [targets, setTargets] = useState<Target[]>(initialTargets);
 
   const [search, setSearch] = useState("");
@@ -388,8 +391,8 @@ export default function Targets() {
               onChange={(event) =>
                 setTypeFilter(
                   event.target.value as
-                    | "All types"
-                    | TargetType,
+                  | "All types"
+                  | TargetType,
                 )
               }
               aria-label="Filter by target type"
@@ -406,8 +409,8 @@ export default function Targets() {
               onChange={(event) =>
                 setStatusFilter(
                   event.target.value as
-                    | "All statuses"
-                    | TargetStatus,
+                  | "All statuses"
+                  | TargetStatus,
                 )
               }
               aria-label="Filter by target status"
@@ -501,6 +504,7 @@ export default function Targets() {
                     <button
                       className="table-action"
                       aria-label={`Open ${target.name}`}
+                      onClick={() => navigate(`/targets/${target.id}`)}
                     >
                       →
                     </button>
