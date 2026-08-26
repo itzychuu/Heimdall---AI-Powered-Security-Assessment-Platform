@@ -12,6 +12,7 @@ import TargetDetails from "./pages/TargetDetails";
 import Scans from "./pages/Scans";
 import ScanDetails from "./pages/ScanDetails";
 import Findings from "./pages/Findings";
+import FindingDetails from "./pages/FindingDetails";
 import Tools from "./pages/Tools";
 import Reports from "./pages/Reports";
 import AIAssistant from "./pages/AIAssistant";
@@ -38,6 +39,10 @@ function App() {
             element={<ScanDetails />}
           />
           <Route path="/scans" element={<Scans />} />
+          <Route
+            path="/findings/:findingId"
+            element={<FindingDetails />}
+          />
           <Route path="/findings" element={<Findings />} />
           <Route path="/tools" element={<Tools />} />
           <Route path="/reports" element={<Reports />} />

@@ -3446,3 +3446,320 @@ nav {
     min-width: auto;
   }
 }
+
+/* ========================================
+   FINDINGS
+   ======================================== */
+
+.findings-card {
+  overflow: hidden;
+}
+
+.findings-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 16px;
+
+  padding: 18px;
+
+  border-bottom: 1px solid var(--color-border);
+}
+
+.finding-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.finding-filters select {
+  min-width: 150px;
+  height: 38px;
+
+  padding: 0 34px 0 12px;
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+
+  outline: none;
+
+  font-size: 12px;
+  font-family: var(--font-sans);
+
+  cursor: pointer;
+
+  color-scheme: dark;
+  appearance: auto;
+
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.finding-filters select:hover,
+.finding-filters select:focus {
+  border-color: rgba(201, 164, 92, 0.45);
+
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+.finding-filters select:focus-visible {
+  outline: 2px solid rgba(201, 164, 92, 0.35);
+  outline-offset: 1px;
+}
+
+.findings-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.findings-table {
+  width: 100%;
+  min-width: 1100px;
+  border-collapse: collapse;
+}
+
+.findings-table th {
+  padding: 14px 20px;
+  text-align: left;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.findings-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  vertical-align: middle;
+}
+
+.findings-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.findings-table tbody tr:hover {
+  background: var(--color-surface-hover);
+}
+
+.finding-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 250px;
+}
+
+.finding-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-gold);
+  background: var(--color-surface);
+  font-size: 16px;
+}
+
+.finding-icon-critical {
+  color: var(--color-danger);
+}
+
+.finding-icon-high {
+  color: #d88f5f;
+}
+
+.finding-icon-medium {
+  color: var(--color-gold-light);
+}
+
+.finding-icon-low {
+  color: #9a968c;
+}
+
+.finding-icon-info {
+  color: var(--color-info);
+}
+
+.finding-name-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.finding-name {
+  color: var(--color-text-primary);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.finding-id {
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.finding-severity {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  padding: 5px 9px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.finding-severity-critical {
+  color: var(--color-danger);
+  background: rgba(239, 68, 68, 0.10);
+}
+
+.finding-severity-high {
+  color: #d88f5f;
+  background: rgba(216, 143, 95, 0.10);
+}
+
+.finding-severity-medium {
+  color: var(--color-warning);
+  background: rgba(234, 179, 8, 0.10);
+}
+
+.finding-severity-low {
+  color: var(--color-text-secondary);
+  background: rgba(184, 177, 165, 0.08);
+}
+
+.finding-severity-info {
+  color: var(--color-info);
+  background: rgba(96, 165, 250, 0.10);
+}
+
+.finding-target,
+.finding-project {
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.finding-discovered {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.finding-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.finding-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+}
+
+.finding-status-open {
+  color: var(--color-danger);
+}
+
+.finding-status-open .finding-status-dot {
+  background: var(--color-danger);
+}
+
+.finding-status-in-progress {
+  color: var(--color-warning);
+}
+
+.finding-status-in-progress .finding-status-dot {
+  background: var(--color-warning);
+}
+
+.finding-status-resolved {
+  color: var(--color-success);
+}
+
+.finding-status-resolved .finding-status-dot {
+  background: var(--color-success);
+}
+
+.finding-status-accepted {
+  color: var(--color-text-secondary);
+}
+
+.finding-status-accepted .finding-status-dot {
+  background: var(--color-text-secondary);
+}
+
+.finding-status-false-positive {
+  color: var(--color-text-muted);
+}
+
+.finding-status-false-positive .finding-status-dot {
+  background: var(--color-text-muted);
+}
+
+.findings-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .findings-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .finding-filters {
+    flex-wrap: wrap;
+  }
+
+  .finding-filters select {
+  min-width: 150px;
+  height: 38px;
+
+  padding: 0 12px;
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+
+  outline: none;
+
+  font-size: 12px;
+
+  cursor: pointer;
+
+  transition:
+    border-color 150ms ease,
+    color 150ms ease,
+    background-color 150ms ease;
+}
+
+.finding-filters select:hover,
+.finding-filters select:focus {
+  border-color: rgba(201, 164, 92, 0.45);
+  color: var(--color-text-primary);
+  background: var(--color-surface-hover);
+}
+}
