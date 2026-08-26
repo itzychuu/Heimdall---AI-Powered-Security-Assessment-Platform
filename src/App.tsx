@@ -10,6 +10,7 @@ import ProjectDetails from "./pages/ProjectDetails";
 import Targets from "./pages/Targets";
 import TargetDetails from "./pages/TargetDetails";
 import Scans from "./pages/Scans";
+import ScanDetails from "./pages/ScanDetails";
 import Findings from "./pages/Findings";
 import Tools from "./pages/Tools";
 import Reports from "./pages/Reports";
@@ -28,7 +29,14 @@ function App() {
             element={<ProjectDetails />}
           />
           <Route path="/targets" element={<Targets />} />
-          <Route path="/targets/:targetId" element={<TargetDetails />} />
+          <Route
+            path="/targets/:targetId"
+            element={<TargetDetails />}
+          />
+          <Route
+            path="/scans/:scanId"
+            element={<ScanDetails />}
+          />
           <Route path="/scans" element={<Scans />} />
           <Route path="/findings" element={<Findings />} />
           <Route path="/tools" element={<Tools />} />

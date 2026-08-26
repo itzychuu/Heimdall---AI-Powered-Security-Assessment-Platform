@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useMemo, useState } from "react";
 import type { Scan, ScanStatus, ScanType } from "../types/scan";
 
@@ -188,8 +189,8 @@ export default function Scans() {
               onChange={(event) =>
                 setStatusFilter(
                   event.target.value as
-                    | "All statuses"
-                    | ScanStatus,
+                  | "All statuses"
+                  | ScanStatus,
                 )
               }
               aria-label="Filter by scan status"
@@ -206,8 +207,8 @@ export default function Scans() {
               onChange={(event) =>
                 setTypeFilter(
                   event.target.value as
-                    | "All types"
-                    | ScanType,
+                  | "All types"
+                  | ScanType,
                 )
               }
               aria-label="Filter by scan type"
@@ -314,12 +315,13 @@ export default function Scans() {
                   </td>
 
                   <td>
-                    <button
+                    <Link
+                      to={`/scans/${scan.id}`}
                       className="table-action"
                       aria-label={`Open ${scan.name}`}
                     >
                       →
-                    </button>
+                    </Link>
                   </td>
                 </tr>
               ))}
