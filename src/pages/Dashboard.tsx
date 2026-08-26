@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 
 import MetricCard from "../components/ui/MetricCard";
+import SecurityPosture from "../components/ui/SecurityPosture";
 
 export default function Dashboard() {
   return (
@@ -53,6 +54,9 @@ export default function Dashboard() {
           trendPositive={false}
           icon={<AlertTriangle size={18} />}
         />
+      </div>
+      <div className="dashboard-main-grid">
+        <SecurityPosture />
       </div>
     </div>
   );
