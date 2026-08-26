@@ -4,6 +4,7 @@ import AppShell from "./components/layout/AppShell";
 
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
+import ProjectDetails from "./pages/ProjectDetails";
 import Targets from "./pages/Targets";
 import Scans from "./pages/Scans";
 import Findings from "./pages/Findings";
@@ -19,6 +20,10 @@ function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/projects" element={<Projects />} />
+          <Route
+            path="/projects/:projectId"
+            element={<ProjectDetails />}
+          />
           <Route path="/targets" element={<Targets />} />
           <Route path="/scans" element={<Scans />} />
           <Route path="/findings" element={<Findings />} />

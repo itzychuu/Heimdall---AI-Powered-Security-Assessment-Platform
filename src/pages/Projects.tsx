@@ -1,93 +1,18 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-type ProjectStatus = "Active" | "Paused" | "Completed";
-
-interface Project {
-  id: number;
-  name: string;
-  description: string;
-  targets: number;
-  scans: number;
-  findings: number;
-  critical: number;
-  status: ProjectStatus;
-  lastActivity: string;
-}
-
-const projects: Project[] = [
-  {
-    id: 1,
-    name: "E-Commerce Platform",
-    description: "Web application security assessment",
-    targets: 12,
-    scans: 24,
-    findings: 37,
-    critical: 2,
-    status: "Active",
-    lastActivity: "Today, 09:42",
-  },
-  {
-    id: 2,
-    name: "Internal Infrastructure",
-    description: "Corporate network security assessment",
-    targets: 8,
-    scans: 11,
-    findings: 21,
-    critical: 1,
-    status: "Active",
-    lastActivity: "Today, 08:17",
-  },
-  {
-    id: 3,
-    name: "Mobile Banking App",
-    description: "Mobile application security assessment",
-    targets: 6,
-    scans: 9,
-    findings: 15,
-    critical: 1,
-    status: "Active",
-    lastActivity: "Yesterday, 18:31",
-  },
-  {
-    id: 4,
-    name: "Cloud Environment",
-    description: "Cloud infrastructure assessment",
-    targets: 10,
-    scans: 15,
-    findings: 28,
-    critical: 3,
-    status: "Active",
-    lastActivity: "Yesterday, 16:04",
-  },
-  {
-    id: 5,
-    name: "Legacy System Audit",
-    description: "Legacy application security review",
-    targets: 4,
-    scans: 7,
-    findings: 9,
-    critical: 0,
-    status: "Completed",
-    lastActivity: "May 17, 2026",
-  },
-  {
-    id: 6,
-    name: "API Security Assessment",
-    description: "REST API security testing",
-    targets: 7,
-    scans: 12,
-    findings: 18,
-    critical: 2,
-    status: "Paused",
-    lastActivity: "May 15, 2026",
-  },
-];
+import {
+  projects,
+  type ProjectStatus,
+} from "../data/projects";
 
 export default function Projects() {
+  const navigate = useNavigate();
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"All" | ProjectStatus>(
-    "All",
-  );
+  const [statusFilter, setStatusFilter] = useState<
+    "All" | ProjectStatus
+  >("All");
 
   const filteredProjects = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -99,7 +24,8 @@ export default function Projects() {
         project.description.toLowerCase().includes(query);
 
       const matchesStatus =
-        statusFilter === "All" || project.status === statusFilter;
+        statusFilter === "All" ||
+        project.status === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
@@ -136,7 +62,9 @@ export default function Projects() {
               type="search"
               placeholder="Search projects..."
               value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
+              onChange={(event) =>
+                setSearchQuery(event.target.value)
+              }
               aria-label="Search projects"
             />
           </div>
@@ -146,7 +74,9 @@ export default function Projects() {
             value={statusFilter}
             onChange={(event) =>
               setStatusFilter(
-                event.target.value as "All" | ProjectStatus,
+                event.target.value as
+                  | "All"
+                  | ProjectStatus,
               )
             }
             aria-label="Filter projects by status"
@@ -175,15 +105,27 @@ export default function Projects() {
 
             <tbody>
               {filteredProjects.map((project) => (
-                <tr key={project.id}>
+                <tr
+                  key={project.id}
+                  onDoubleClick={() =>
+                    navigate(`/projects/${project.id}`)
+                  }
+                  className="project-row"
+                >
                   <td>
                     <div className="project-name-cell">
-                      <div className="project-icon" aria-hidden="true">
+                      <div
+                        className="project-icon"
+                        aria-hidden="true"
+                      >
                         ◈
                       </div>
 
                       <div>
-                        <div className="project-name">{project.name}</div>
+                        <div className="project-name">
+                          {project.name}
+                        </div>
+
                         <div className="project-description">
                           {project.description}
                         </div>
@@ -192,15 +134,21 @@ export default function Projects() {
                   </td>
 
                   <td>
-                    <span className="table-number">{project.targets}</span>
+                    <span className="table-number">
+                      {project.targets}
+                    </span>
                   </td>
 
                   <td>
-                    <span className="table-number">{project.scans}</span>
+                    <span className="table-number">
+                      {project.scans}
+                    </span>
                   </td>
 
                   <td>
-                    <span className="table-number">{project.findings}</span>
+                    <span className="table-number">
+                      {project.findings}
+                    </span>
                   </td>
 
                   <td>
@@ -235,9 +183,9 @@ export default function Projects() {
                       className="row-action"
                       type="button"
                       aria-label={`Open ${project.name}`}
-                      onClick={() => {
-                        console.log("Open project:", project.name);
-                      }}
+                      onClick={() =>
+                        navigate(`/projects/${project.id}`)
+                      }
                     >
                       →
                     </button>
@@ -250,7 +198,9 @@ export default function Projects() {
           {filteredProjects.length === 0 && (
             <div className="projects-empty-state">
               <div className="empty-icon">⌕</div>
+
               <h3>No projects found</h3>
+
               <p>
                 Try changing your search or status filter.
               </p>
@@ -260,8 +210,7 @@ export default function Projects() {
 
         <div className="projects-footer">
           <span>
-            Showing{" "}
-            <strong>{filteredProjects.length}</strong>{" "}
+            Showing <strong>{filteredProjects.length}</strong>{" "}
             of <strong>{projects.length}</strong> projects
           </span>
 
@@ -270,7 +219,10 @@ export default function Projects() {
               ←
             </button>
 
-            <button type="button" className="pagination-active">
+            <button
+              type="button"
+              className="pagination-active"
+            >
               1
             </button>
 
