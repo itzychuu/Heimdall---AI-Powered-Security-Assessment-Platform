@@ -10,16 +10,54 @@ import {
   Settings,
 } from "lucide-react";
 
+import { NavLink } from "react-router-dom";
+
 const items = [
-  { icon: LayoutDashboard, label: "Dashboard" },
-  { icon: FolderKanban, label: "Projects" },
-  { icon: Target, label: "Targets" },
-  { icon: ScanLine, label: "Scans" },
-  { icon: ShieldAlert, label: "Findings" },
-  { icon: Wrench, label: "Tools" },
-  { icon: FileText, label: "Reports" },
-  { icon: Bot, label: "AI Assistant" },
-  { icon: Settings, label: "Settings" },
+  {
+    icon: LayoutDashboard,
+    label: "Dashboard",
+    path: "/",
+  },
+  {
+    icon: FolderKanban,
+    label: "Projects",
+    path: "/projects",
+  },
+  {
+    icon: Target,
+    label: "Targets",
+    path: "/targets",
+  },
+  {
+    icon: ScanLine,
+    label: "Scans",
+    path: "/scans",
+  },
+  {
+    icon: ShieldAlert,
+    label: "Findings",
+    path: "/findings",
+  },
+  {
+    icon: Wrench,
+    label: "Tools",
+    path: "/tools",
+  },
+  {
+    icon: FileText,
+    label: "Reports",
+    path: "/reports",
+  },
+  {
+    icon: Bot,
+    label: "AI Assistant",
+    path: "/ai",
+  },
+  {
+    icon: Settings,
+    label: "Settings",
+    path: "/settings",
+  },
 ];
 
 export default function Sidebar() {
@@ -35,10 +73,16 @@ export default function Sidebar() {
           const Icon = item.icon;
 
           return (
-            <button key={item.label} className="nav-item">
+            <NavLink
+              key={item.label}
+              to={item.path}
+              className={({ isActive }) =>
+                `nav-item ${isActive ? "active" : ""}`
+              }
+            >
               <Icon size={18} />
               <span>{item.label}</span>
-            </button>
+            </NavLink>
           );
         })}
       </nav>

@@ -66,25 +66,57 @@ nav {
 
 .nav-item {
   width: 100%;
+
   display: flex;
-  gap: 10px;
   align-items: center;
+  gap: 10px;
 
   padding: 12px;
+
   margin-bottom: 8px;
 
-  border: none;
   border-radius: var(--radius-md);
 
   background: transparent;
-  color: var(--color-text-primary);
+
+  color: var(--color-text-secondary);
+
+  border: 1px solid transparent;
+
+  transition:
+    background 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease;
 }
 
 .nav-item:hover {
   background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+.nav-item.active {
+  background: rgba(201, 164, 92, 0.12);
+  color: var(--color-gold-light);
+  border-color: rgba(201, 164, 92, 0.25);
 }
 
 .content {
   flex: 1;
   padding: 32px;
+}
+
+.page {
+  max-width: 1400px;
+}
+
+.page h1 {
+  margin: 0 0 8px;
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.page p {
+  margin: 0;
+  color: var(--color-text-secondary);
 }
