@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
+import "./styles/scans.css";
+
 import AppShell from "./components/layout/AppShell";
 
 import Dashboard from "./pages/Dashboard";
