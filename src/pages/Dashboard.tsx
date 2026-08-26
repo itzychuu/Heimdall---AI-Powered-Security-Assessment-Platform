@@ -8,6 +8,8 @@ import {
 
 import MetricCard from "../components/ui/MetricCard";
 import SecurityPosture from "../components/ui/SecurityPosture";
+import ActionRequired from "../components/ui/ActionRequired";
+import ActiveAssessments from "../components/ui/ActiveAssessments";
 
 export default function Dashboard() {
   return (
@@ -57,6 +59,10 @@ export default function Dashboard() {
       </div>
       <div className="dashboard-main-grid">
         <SecurityPosture />
+
+        <ActionRequired />
+
+        <ActiveAssessments />
       </div>
     </div>
   );
