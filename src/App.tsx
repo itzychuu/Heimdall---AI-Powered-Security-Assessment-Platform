@@ -14,6 +14,7 @@ import ScanDetails from "./pages/ScanDetails";
 import Findings from "./pages/Findings";
 import FindingDetails from "./pages/FindingDetails";
 import Tools from "./pages/Tools";
+import ToolDetails from "./pages/ToolDetails";
 import Reports from "./pages/Reports";
 import AIAssistant from "./pages/AIAssistant";
 import Settings from "./pages/Settings";
@@ -45,6 +46,10 @@ function App() {
           />
           <Route path="/findings" element={<Findings />} />
           <Route path="/tools" element={<Tools />} />
+          <Route
+            path="/tools/:toolId"
+            element={<ToolDetails />}
+          />
           <Route path="/reports" element={<Reports />} />
           <Route path="/ai" element={<AIAssistant />} />
           <Route path="/settings" element={<Settings />} />
