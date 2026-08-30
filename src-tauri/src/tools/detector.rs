@@ -12,7 +12,6 @@ pub struct DetectedTool {
 }
 
 pub fn detect(tool: &ToolDefinition) -> DetectedTool {
-    // First try resolving the command through the operating system.
     if let Some(path) = find_on_path(tool.command) {
         let version = detect_version(&path);
 
@@ -42,7 +41,8 @@ fn find_on_path(command: &str) -> Option<String> {
             return None;
         }
 
-        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let stdout =
+            String::from_utf8_lossy(&output.stdout).to_string();
 
         let path = stdout
             .lines()
@@ -69,7 +69,8 @@ fn find_on_path(command: &str) -> Option<String> {
             return None;
         }
 
-        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let stdout =
+            String::from_utf8_lossy(&output.stdout).to_string();
 
         let path = stdout
             .lines()
@@ -92,15 +93,55 @@ fn detect_version(executable: &str) -> Option<String> {
         .output()
         .ok()?;
 
-    if !output.status.success() {
-        return None;
+    let stdout =
+        String::from_utf8_lossy(&output.stdout).to_string();
+
+    let stderr =
+        String::from_utf8_lossy(&output.stderr).to_string();
+
+    let combined = format!("{}\n{}", stdout, stderr);
+
+    extract_version(&combined)
+}
+
+fn extract_version(output: &str) -> Option<String> {
+    for line in output.lines() {
+        for raw_token in line.split_whitespace() {
+            let token = raw_token
+                .trim_matches(|character: char| {
+                    matches!(
+                        character,
+                        '(' | ')' | '[' | ']' | ',' | ':' | ';'
+                    )
+                })
+                .trim_start_matches('v');
+
+            if looks_like_version(token) {
+                return Some(token.to_string());
+            }
+        }
     }
 
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    None
+}
 
-    stdout
-        .lines()
-        .map(str::trim)
-        .find(|line| !line.is_empty())
-        .map(String::from)
+fn looks_like_version(value: &str) -> bool {
+    let mut saw_digit = false;
+    let mut saw_dot = false;
+
+    for character in value.chars() {
+        if character.is_ascii_digit() {
+            saw_digit = true;
+            continue;
+        }
+
+        if character == '.' {
+            saw_dot = true;
+            continue;
+        }
+
+        return false;
+    }
+
+    saw_digit && saw_dot
 }

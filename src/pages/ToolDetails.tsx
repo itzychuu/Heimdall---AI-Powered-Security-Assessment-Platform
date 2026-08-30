@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useNavigate, useParams } from "react-router-dom";
 
 import {
     Activity,
@@ -16,9 +16,26 @@ import {
 } from "lucide-react";
 
 import { tools } from "../data/tools";
-import type { ToolCategory, ToolStatus } from "../types/tool";
+import type {
+    ToolCategory,
+    ToolStatus,
+} from "../types/tool";
 
 import "../styles/tool-details.css";
+
+interface ToolDetectionResult {
+    tool_id: string;
+    installed: boolean;
+    executable: string | null;
+    version: string | null;
+}
+
+interface ToolExecutionResult {
+    tool_id: string;
+    stdout: string;
+    stderr: string;
+    exit_code: number | null;
+}
 
 function ToolIcon({
     category,
@@ -79,51 +96,68 @@ export default function ToolDetails() {
     const { toolId } = useParams();
     const navigate = useNavigate();
 
-    const [isRunning, setIsRunning] = useState(false);
+    const [detection, setDetection] =
+        useState<ToolDetectionResult | null>(null);
+
+    const [isDetecting, setIsDetecting] =
+        useState(true);
+
+    const [isRunning, setIsRunning] =
+        useState(false);
+
     const [output, setOutput] = useState("");
+
     const [error, setError] = useState("");
-
-    const runTool = async () => {
-        if (!tool || tool.status !== "Installed") {
-            return;
-        }
-
-        setIsRunning(true);
-        setOutput("");
-        setError("");
-
-        try {
-            const result = await invoke<{
-                tool_id: string;
-                stdout: string;
-                stderr: string;
-                exit_code: number | null;
-            }>("run_security_tool", {
-                toolId: tool.id,
-                args: ["--version"],
-            });
-
-            const combinedOutput = [
-                result.stdout,
-                result.stderr,
-            ]
-                .filter(Boolean)
-                .join("\n");
-
-            setOutput(
-                combinedOutput ||
-                `Process exited with code ${result.exit_code ?? "unknown"}.`,
-            );
-        } catch (error) {
-            setError(String(error));
-        } finally {
-            setIsRunning(false);
-        }
-    };
 
     const tool = tools.find(
         (item) => item.id === toolId,
     );
+
+    useEffect(() => {
+        if (!tool) {
+            return;
+        }
+
+        const currentToolId = tool.id;
+
+        let cancelled = false;
+
+        async function detectTool() {
+            try {
+                setIsDetecting(true);
+
+                const results =
+                    await invoke<ToolDetectionResult[]>(
+                        "detect_tools",
+                    );
+
+                if (cancelled) {
+                    return;
+                }
+
+                const result = results.find(
+                    (item) => item.tool_id === currentToolId,
+                );
+
+                setDetection(result ?? null);
+            } catch (error) {
+                console.error(
+                    "Failed to detect tool:",
+                    error,
+                );
+            } finally {
+                if (!cancelled) {
+                    setIsDetecting(false);
+                }
+            }
+        }
+
+        detectTool();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [tool]);
 
     if (!tool) {
         return (
@@ -159,8 +193,64 @@ export default function ToolDetails() {
         );
     }
 
+    const actualStatus: ToolStatus =
+        detection?.installed
+            ? "Installed"
+            : isDetecting
+                ? "Unknown"
+                : "Not Installed";
+
+    const actualVersion =
+        detection?.version ?? tool.version ?? null;
+
+    const executablePath =
+        detection?.executable ?? null;
+
+    const canRun =
+        actualStatus === "Installed" &&
+        !isRunning;
+
+    const runTool = async () => {
+        if (!canRun) {
+            return;
+        }
+
+        setIsRunning(true);
+        setOutput("");
+        setError("");
+
+        try {
+            const result =
+                await invoke<ToolExecutionResult>(
+                    "run_security_tool",
+                    {
+                        toolId: tool.id,
+                        args: ["--version"],
+                    },
+                );
+
+            const combinedOutput = [
+                result.stdout,
+                result.stderr,
+            ]
+                .filter(Boolean)
+                .join("\n");
+
+            setOutput(
+                combinedOutput ||
+                `Process exited with code ${result.exit_code ?? "unknown"
+                }.`,
+            );
+        } catch (error) {
+            setError(String(error));
+        } finally {
+            setIsRunning(false);
+        }
+    };
+
     return (
         <div className="page tool-details-page">
+            {/* Back */}
             <button
                 className="tool-details-back"
                 onClick={() => navigate("/tools")}
@@ -184,15 +274,16 @@ export default function ToolDetails() {
                                 {tool.category}
                             </span>
 
-                            <ToolStatus status={tool.status} />
+                            <ToolStatus status={actualStatus} />
                         </div>
 
                         <p className="tool-details-command">
                             <Terminal size={14} />
+
                             <code>{tool.command}</code>
 
-                            {tool.version && (
-                                <span>v{tool.version}</span>
+                            {actualVersion && (
+                                <span>{actualVersion}</span>
                             )}
                         </p>
                     </div>
@@ -213,16 +304,19 @@ export default function ToolDetails() {
                 <div className="tool-overview-grid">
                     <div className="tool-overview-item">
                         <span>Name</span>
+
                         <strong>{tool.name}</strong>
                     </div>
 
                     <div className="tool-overview-item">
                         <span>Category</span>
+
                         <strong>{tool.category}</strong>
                     </div>
 
                     <div className="tool-overview-item">
                         <span>Command</span>
+
                         <strong className="tool-monospace">
                             {tool.command}
                         </strong>
@@ -230,16 +324,26 @@ export default function ToolDetails() {
 
                     <div className="tool-overview-item">
                         <span>Version</span>
+
                         <strong>
-                            {tool.version
-                                ? `v${tool.version}`
+                            {actualVersion
+                                ? actualVersion
                                 : "Unknown"}
                         </strong>
                     </div>
 
                     <div className="tool-overview-item">
                         <span>Status</span>
-                        <ToolStatus status={tool.status} />
+
+                        <ToolStatus status={actualStatus} />
+                    </div>
+
+                    <div className="tool-overview-item">
+                        <span>Executable</span>
+
+                        <strong className="tool-monospace">
+                            {executablePath ?? "Not detected"}
+                        </strong>
                     </div>
                 </div>
             </section>
@@ -290,14 +394,16 @@ export default function ToolDetails() {
                     <div className="tool-execution-actions">
                         <button
                             className="primary-button"
-                            disabled={
-                                tool.status !== "Installed" ||
-                                isRunning
-                            }
+                            disabled={!canRun}
                             onClick={runTool}
                         >
                             <Terminal size={16} />
-                            {isRunning ? "Running..." : "Run Tool"}
+
+                            {isRunning
+                                ? "Running..."
+                                : actualStatus === "Not Installed"
+                                    ? "Tool Not Installed"
+                                    : "Run Tool"}
                         </button>
                     </div>
                 </div>
@@ -318,7 +424,13 @@ export default function ToolDetails() {
                         <span>TERMINAL</span>
 
                         <span className="tool-terminal-status">
-                            Ready
+                            {isRunning
+                                ? "Running"
+                                : error
+                                    ? "Error"
+                                    : output
+                                        ? "Completed"
+                                        : "Ready"}
                         </span>
                     </div>
 
@@ -351,9 +463,11 @@ export default function ToolDetails() {
                             </pre>
                         )}
 
-                        {!isRunning && !output && !error && (
-                            <span className="tool-terminal-cursor" />
-                        )}
+                        {!isRunning &&
+                            !output &&
+                            !error && (
+                                <span className="tool-terminal-cursor" />
+                            )}
                     </div>
                 </div>
             </section>

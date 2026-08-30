@@ -22,7 +22,7 @@ pub const TOOLS: &[ToolDefinition] = &[
         command: "nmap",
 
         windows_package_manager: Some("winget"),
-        windows_package_id: None,
+        windows_package_id: Some("Insecure.Nmap"),
     },
 
     ToolDefinition {
@@ -33,7 +33,7 @@ pub const TOOLS: &[ToolDefinition] = &[
         category: "Vulnerability",
         command: "nuclei",
 
-        windows_package_manager: Some("winget"),
+        windows_package_manager: None,
         windows_package_id: None,
     },
 
@@ -45,7 +45,7 @@ pub const TOOLS: &[ToolDefinition] = &[
         category: "Web",
         command: "nikto",
 
-        windows_package_manager: Some("winget"),
+        windows_package_manager: None,
         windows_package_id: None,
     },
 
@@ -57,7 +57,7 @@ pub const TOOLS: &[ToolDefinition] = &[
         category: "Enumeration",
         command: "gobuster",
 
-        windows_package_manager: Some("winget"),
+        windows_package_manager: None,
         windows_package_id: None,
     },
 
@@ -69,7 +69,7 @@ pub const TOOLS: &[ToolDefinition] = &[
         category: "Password",
         command: "john",
 
-        windows_package_manager: Some("winget"),
+        windows_package_manager: None,
         windows_package_id: None,
     },
 
@@ -81,7 +81,7 @@ pub const TOOLS: &[ToolDefinition] = &[
         category: "Password",
         command: "hydra",
 
-        windows_package_manager: Some("winget"),
+        windows_package_manager: None,
         windows_package_id: None,
     },
 
@@ -93,7 +93,7 @@ pub const TOOLS: &[ToolDefinition] = &[
         category: "Web",
         command: "ffuf",
 
-        windows_package_manager: Some("winget"),
+        windows_package_manager: None,
         windows_package_id: None,
     },
 
@@ -105,7 +105,7 @@ pub const TOOLS: &[ToolDefinition] = &[
         category: "Web",
         command: "sqlmap",
 
-        windows_package_manager: Some("winget"),
+        windows_package_manager: None,
         windows_package_id: None,
     },
 
@@ -117,7 +117,7 @@ pub const TOOLS: &[ToolDefinition] = &[
         category: "Web",
         command: "whatweb",
 
-        windows_package_manager: Some("winget"),
+        windows_package_manager: None,
         windows_package_id: None,
     },
 
@@ -129,7 +129,7 @@ pub const TOOLS: &[ToolDefinition] = &[
         category: "Network",
         command: "masscan",
 
-        windows_package_manager: Some("winget"),
+        windows_package_manager: None,
         windows_package_id: None,
     },
 
@@ -141,7 +141,7 @@ pub const TOOLS: &[ToolDefinition] = &[
         category: "Enumeration",
         command: "amass",
 
-        windows_package_manager: Some("winget"),
+        windows_package_manager: None,
         windows_package_id: None,
     },
 
@@ -153,7 +153,7 @@ pub const TOOLS: &[ToolDefinition] = &[
         category: "Vulnerability",
         command: "searchsploit",
 
-        windows_package_manager: Some("winget"),
+        windows_package_manager: None,
         windows_package_id: None,
     },
 ];

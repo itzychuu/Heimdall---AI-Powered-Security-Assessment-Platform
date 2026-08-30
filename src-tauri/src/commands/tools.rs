@@ -1,16 +1,8 @@
 use serde::Serialize;
 
 use crate::process::executor;
-use crate::security::tool_policy;
-use crate::tools::{detector, registry};
-
-#[derive(Debug, Serialize)]
-pub struct ToolExecutionResult {
-    pub tool_id: String,
-    pub stdout: String,
-    pub stderr: String,
-    pub exit_code: Option<i32>,
-}
+use crate::tools::detector;
+use crate::tools::registry;
 
 #[derive(Debug, Serialize)]
 pub struct ToolDetectionResult {
@@ -20,28 +12,63 @@ pub struct ToolDetectionResult {
     pub version: Option<String>,
 }
 
+#[derive(Debug, Serialize)]
+pub struct ToolExecutionResult {
+    pub tool_id: String,
+    pub stdout: String,
+    pub stderr: String,
+    pub exit_code: Option<i32>,
+}
+
 #[tauri::command]
-pub async fn run_security_tool(
+pub async fn detect_tools() -> Vec<ToolDetectionResult> {
+    registry::TOOLS
+        .iter()
+        .map(|tool| {
+            let detected = detector::detect(tool);
+
+            ToolDetectionResult {
+                tool_id: tool.id.to_string(),
+                installed: detected.installed,
+                executable: detected.executable,
+                version: detected.version,
+            }
+        })
+        .collect()
+}
+
+#[derive(Debug, Serialize)]
+pub struct ToolInstallationResult {
+    pub tool_id: String,
+    pub stdout: String,
+    pub stderr: String,
+    pub exit_code: Option<i32>,
+}
+
+#[tauri::command]
+pub async fn install_tool(
     tool_id: String,
-    args: Vec<String>,
-) -> Result<ToolExecutionResult, String> {
-    let tool = tool_policy::get_tool(&tool_id)
+) -> Result<ToolInstallationResult, String> {
+    let tool = registry::get_tool(&tool_id)
         .ok_or_else(|| {
             format!(
-                "Tool '{}' is not allowed to execute.",
+                "Tool '{}' is not registered with Heimdall.",
                 tool_id
             )
         })?;
 
     let result = tauri::async_runtime::spawn_blocking(
-        move || executor::execute(tool, &args),
+        move || crate::tools::installer::install(tool),
     )
     .await
     .map_err(|error| {
-        format!("Tool execution task failed: {}", error)
+        format!(
+            "Tool installation task failed: {}",
+            error
+        )
     })??;
 
-    Ok(ToolExecutionResult {
+    Ok(ToolInstallationResult {
         tool_id,
         stdout: result.stdout,
         stderr: result.stderr,
@@ -50,22 +77,51 @@ pub async fn run_security_tool(
 }
 
 #[tauri::command]
-pub async fn detect_tools() -> Vec<ToolDetectionResult> {
-    tauri::async_runtime::spawn_blocking(|| {
-        registry::TOOLS
-            .iter()
-            .map(|tool| {
-                let detected = detector::detect(tool);
+pub async fn run_security_tool(
+    tool_id: String,
+    args: Vec<String>,
+) -> Result<ToolExecutionResult, String> {
+    let tool = registry::get_tool(&tool_id)
+        .ok_or_else(|| {
+            format!(
+                "Tool '{}' is not registered with Heimdall.",
+                tool_id
+            )
+        })?;
 
-                ToolDetectionResult {
-                    tool_id: tool.id.to_string(),
-                    installed: detected.installed,
-                    executable: detected.executable,
-                    version: detected.version,
-                }
-            })
-            .collect()
-    })
+    let detected = detector::detect(tool);
+
+    if !detected.installed {
+        return Err(format!(
+            "Tool '{}' is not installed or could not be detected.",
+            tool.name
+        ));
+    }
+
+    let executable = detected
+        .executable
+        .ok_or_else(|| {
+            format!(
+                "Executable for '{}' could not be resolved.",
+                tool.name
+            )
+        })?;
+
+    let result = tauri::async_runtime::spawn_blocking(
+        move || executor::execute(&executable, &args),
+    )
     .await
-    .unwrap_or_default()
+    .map_err(|error| {
+        format!(
+            "Tool execution task failed: {}",
+            error
+        )
+    })??;
+
+    Ok(ToolExecutionResult {
+        tool_id,
+        stdout: result.stdout,
+        stderr: result.stderr,
+        exit_code: result.exit_code,
+    })
 }
