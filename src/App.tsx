@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import "./styles/scans.css";
-
+import "./styles/new-scan.css";
 import AppShell from "./components/layout/AppShell";
 
 import Dashboard from "./pages/Dashboard";
@@ -10,6 +10,7 @@ import ProjectDetails from "./pages/ProjectDetails";
 import Targets from "./pages/Targets";
 import TargetDetails from "./pages/TargetDetails";
 import Scans from "./pages/Scans";
+import NewScan from "./pages/NewScan";
 import ScanDetails from "./pages/ScanDetails";
 import Findings from "./pages/Findings";
 import FindingDetails from "./pages/FindingDetails";
@@ -35,11 +36,12 @@ function App() {
             path="/targets/:targetId"
             element={<TargetDetails />}
           />
+          <Route path="/scans" element={<Scans />} />
+          <Route path="/scans/new" element={<NewScan />} />
           <Route
             path="/scans/:scanId"
             element={<ScanDetails />}
           />
-          <Route path="/scans" element={<Scans />} />
           <Route
             path="/findings/:findingId"
             element={<FindingDetails />}

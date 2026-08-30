@@ -1,86 +1,23 @@
-import { useParams, Link } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
+
 import type { Scan } from "../types/scan";
 
-const scans: Scan[] = [
-  {
-    id: "scan-001",
-    name: "Web App Assessment",
-    target: "https://shop.example.com",
-    targetType: "Web Application",
-    project: "E-Commerce Platform",
-    progress: 68,
-    status: "Running",
-    startedAt: "Today, 09:42",
-    duration: "14:32",
-    findings: 12,
-    critical: 2,
-  },
-  {
-    id: "scan-002",
-    name: "Network Assessment",
-    target: "192.168.1.0/24",
-    targetType: "Network",
-    project: "Internal Infrastructure",
-    progress: 100,
-    status: "Completed",
-    startedAt: "Today, 07:31",
-    duration: "08:17",
-    findings: 21,
-    critical: 1,
-  },
-  {
-    id: "scan-003",
-    name: "API Security Test",
-    target: "https://api.example.com",
-    targetType: "API Security",
-    project: "E-Commerce Platform",
-    progress: 100,
-    status: "Completed",
-    startedAt: "Yesterday, 16:20",
-    duration: "03:41",
-    findings: 8,
-    critical: 1,
-  },
-  {
-    id: "scan-004",
-    name: "Authentication Assessment",
-    target: "https://shop.example.com",
-    targetType: "Authentication",
-    project: "E-Commerce Platform",
-    progress: 100,
-    status: "Completed",
-    startedAt: "May 16, 2026",
-    duration: "11:24",
-    findings: 5,
-    critical: 0,
-  },
-  {
-    id: "scan-005",
-    name: "Internal Network Discovery",
-    target: "10.10.20.0/24",
-    targetType: "Network",
-    project: "Internal Infrastructure",
-    progress: 42,
-    status: "Running",
-    startedAt: "Today, 08:17",
-    duration: "05:12",
-    findings: 4,
-    critical: 0,
-  },
-  {
-    id: "scan-006",
-    name: "Legacy Application Audit",
-    target: "https://legacy.example.com",
-    targetType: "Web Application",
-    project: "Legacy System Audit",
-    progress: 100,
-    status: "Paused",
-    startedAt: "May 15, 2026",
-    duration: "18:09",
-    findings: 9,
-    critical: 0,
-  },
-];
+interface BackendScanResult {
+  scan_id: string;
+  name: string;
+  target: string;
+  target_type: string;
+  project: string;
+  tool_id: string;
+  status: string;
+  stdout: string;
+  stderr: string;
+  exit_code: number | null;
+}
+
+interface ScanExecutionState {
+  scan?: BackendScanResult;
+}
 
 function ScanIcon() {
   return (
@@ -105,12 +42,111 @@ function StatusIndicator({
   );
 }
 
+function normalizeTargetType(
+  targetType: string,
+): Scan["targetType"] {
+  switch (targetType) {
+    case "WebApplication":
+    case "Web Application":
+      return "Web Application";
+
+    case "ApiSecurity":
+    case "API Security":
+      return "API Security";
+
+    case "Network":
+      return "Network";
+
+    case "Authentication":
+      return "Authentication";
+
+    default:
+      return "Network";
+  }
+}
+
+function normalizeStatus(
+  status: string,
+): Scan["status"] {
+  switch (status) {
+    case "Running":
+      return "Running";
+
+    case "Paused":
+      return "Paused";
+
+    case "Failed":
+      return "Failed";
+
+    case "Completed":
+      return "Completed";
+
+    default:
+      return "Failed";
+  }
+}
+
 export default function ScanDetails() {
   const { scanId } = useParams<{ scanId: string }>();
 
-  const scan = scans.find((item) => item.id === scanId);
+  const location = useLocation();
 
-  if (!scan) {
+  const state = location.state as ScanExecutionState | null;
+
+  const backendScan = state?.scan;
+
+  /*
+   * The New Scan page passes the real scan result through
+   * React Router navigation state.
+   *
+   * We also verify that the ID in the URL matches the
+   * scan returned by the backend.
+   */
+  const validBackendScan =
+    backendScan &&
+    (!scanId || backendScan.scan_id === scanId)
+      ? backendScan
+      : undefined;
+
+  const scan: Scan | undefined = validBackendScan
+    ? {
+        id: validBackendScan.scan_id,
+
+        name: validBackendScan.name,
+
+        target: validBackendScan.target,
+
+        targetType: normalizeTargetType(
+          validBackendScan.target_type,
+        ),
+
+        project: validBackendScan.project,
+
+        progress:
+          normalizeStatus(validBackendScan.status) ===
+          "Completed"
+            ? 100
+            : 0,
+
+        status: normalizeStatus(
+          validBackendScan.status,
+        ),
+
+        startedAt: "Just now",
+
+        duration:
+          normalizeStatus(validBackendScan.status) ===
+          "Completed"
+            ? "Completed"
+            : "In progress",
+
+        findings: 0,
+
+        critical: 0,
+      }
+    : undefined;
+
+  if (!scan || !validBackendScan) {
     return (
       <div className="page scan-details-page">
         <Link to="/scans" className="back-link">
@@ -119,11 +155,16 @@ export default function ScanDetails() {
 
         <div className="card not-found-card">
           <h2>Scan not found</h2>
+
           <p>
-            The requested security assessment could not be found.
+            The requested security assessment could not
+            be found.
           </p>
 
-          <Link to="/scans" className="secondary-button">
+          <Link
+            to="/scans"
+            className="secondary-button"
+          >
             Return to Scans
           </Link>
         </div>
@@ -133,11 +174,27 @@ export default function ScanDetails() {
 
   const isRunning = scan.status === "Running";
 
+  const isCompleted =
+    scan.status === "Completed";
+
+  const isFailed =
+    scan.status === "Failed";
+
+  const hasStdout =
+    validBackendScan.stdout.trim().length > 0;
+
+  const hasStderr =
+    validBackendScan.stderr.trim().length > 0;
+
   return (
     <div className="page scan-details-page">
       <Link to="/scans" className="back-link">
         ← Back to Scans
       </Link>
+
+      {/* =====================================================
+          HEADER
+          ===================================================== */}
 
       <div className="scan-detail-header">
         <div className="scan-detail-heading">
@@ -146,7 +203,10 @@ export default function ScanDetails() {
           <div>
             <div className="scan-detail-title-row">
               <h1>{scan.name}</h1>
-              <StatusIndicator status={scan.status} />
+
+              <StatusIndicator
+                status={scan.status}
+              />
             </div>
 
             <p>
@@ -157,22 +217,34 @@ export default function ScanDetails() {
 
         <div className="scan-detail-actions">
           {isRunning && (
-            <button className="secondary-button danger-button">
+            <button
+              type="button"
+              className="secondary-button danger-button"
+            >
               Stop Scan
             </button>
           )}
 
-          <button className="primary-button">
+          <Link
+            to="/scans/new"
+            className="primary-button"
+          >
             <span>+</span>
             New Scan
-          </button>
+          </Link>
         </div>
       </div>
+
+      {/* =====================================================
+          METRICS
+          ===================================================== */}
 
       <div className="metric-grid scan-detail-metrics">
         <div className="card metric-card">
           <div className="metric-card-header">
-            <span className="metric-label">PROGRESS</span>
+            <span className="metric-label">
+              PROGRESS
+            </span>
           </div>
 
           <div className="metric-value">
@@ -193,7 +265,9 @@ export default function ScanDetails() {
 
         <div className="card metric-card">
           <div className="metric-card-header">
-            <span className="metric-label">FINDINGS</span>
+            <span className="metric-label">
+              FINDINGS
+            </span>
           </div>
 
           <div className="metric-value">
@@ -202,14 +276,16 @@ export default function ScanDetails() {
 
           <div className="metric-footer">
             <span className="metric-description">
-              Discovered findings
+              Findings discovered
             </span>
           </div>
         </div>
 
         <div className="card metric-card">
           <div className="metric-card-header">
-            <span className="metric-label">CRITICAL</span>
+            <span className="metric-label">
+              CRITICAL
+            </span>
           </div>
 
           <div className="metric-value scan-detail-critical-value">
@@ -225,26 +301,33 @@ export default function ScanDetails() {
 
         <div className="card metric-card">
           <div className="metric-card-header">
-            <span className="metric-label">DURATION</span>
+            <span className="metric-label">
+              STATUS
+            </span>
           </div>
 
           <div className="metric-value scan-duration-value">
-            {scan.duration}
+            {scan.status}
           </div>
 
           <div className="metric-footer">
             <span className="metric-description">
-              Elapsed assessment time
+              Current assessment state
             </span>
           </div>
         </div>
       </div>
+
+      {/* =====================================================
+          MAIN INFORMATION
+          ===================================================== */}
 
       <div className="scan-detail-main-grid">
         <section className="card">
           <div className="section-header">
             <div>
               <h2>Scan Information</h2>
+
               <p>
                 Configuration and execution details.
               </p>
@@ -254,40 +337,72 @@ export default function ScanDetails() {
           <div className="scan-information-grid">
             <div className="scan-information-item">
               <span>Scan ID</span>
+
               <strong>{scan.id}</strong>
             </div>
 
             <div className="scan-information-item">
               <span>Scan Type</span>
-              <strong>{scan.targetType}</strong>
+
+              <strong>
+                {scan.targetType}
+              </strong>
             </div>
 
             <div className="scan-information-item">
               <span>Target</span>
+
               <strong>{scan.target}</strong>
             </div>
 
             <div className="scan-information-item">
               <span>Project</span>
+
               <strong>{scan.project}</strong>
             </div>
 
             <div className="scan-information-item">
+              <span>Security Tool</span>
+
+              <strong>
+                {validBackendScan.tool_id}
+              </strong>
+            </div>
+
+            <div className="scan-information-item">
               <span>Started</span>
+
               <strong>{scan.startedAt}</strong>
             </div>
 
             <div className="scan-information-item">
+              <span>Exit Code</span>
+
+              <strong>
+                {validBackendScan.exit_code ??
+                  "Not available"}
+              </strong>
+            </div>
+
+            <div className="scan-information-item">
               <span>Status</span>
-              <StatusIndicator status={scan.status} />
+
+              <StatusIndicator
+                status={scan.status}
+              />
             </div>
           </div>
         </section>
+
+        {/* =====================================================
+            EXECUTION OVERVIEW
+            ===================================================== */}
 
         <section className="card">
           <div className="section-header">
             <div>
               <h2>Execution Overview</h2>
+
               <p>
                 Current scan execution status.
               </p>
@@ -296,8 +411,13 @@ export default function ScanDetails() {
 
           <div className="execution-overview">
             <div className="execution-progress-header">
-              <span>Assessment progress</span>
-              <strong>{scan.progress}%</strong>
+              <span>
+                Assessment progress
+              </span>
+
+              <strong>
+                {scan.progress}%
+              </strong>
             </div>
 
             <div className="execution-progress">
@@ -313,7 +433,9 @@ export default function ScanDetails() {
               <span>
                 {isRunning
                   ? "Assessment currently running"
-                  : "Assessment execution complete"}
+                  : isFailed
+                    ? "Assessment execution failed"
+                    : "Assessment execution complete"}
               </span>
 
               <span>{scan.duration}</span>
@@ -321,50 +443,78 @@ export default function ScanDetails() {
           </div>
 
           <div className="execution-stage-list">
-            <div className="execution-stage completed">
+            {/* Discovery */}
+
+            <div
+              className={`execution-stage ${
+                isFailed
+                  ? "completed"
+                  : "completed"
+              }`}
+            >
               <span className="execution-stage-indicator">
                 ✓
               </span>
 
               <div>
                 <strong>Discovery</strong>
-                <span>Target enumeration completed</span>
+
+                <span>
+                  Target supplied to the security
+                  tool.
+                </span>
               </div>
             </div>
 
-            <div className="execution-stage active">
+            {/* Security Assessment */}
+
+            <div
+              className={`execution-stage ${
+                isRunning
+                  ? "active"
+                  : isFailed
+                    ? "completed"
+                    : "completed"
+              }`}
+            >
               <span className="execution-stage-indicator">
                 {isRunning ? "•" : "✓"}
               </span>
 
               <div>
                 <strong>
-                  {isRunning
-                    ? "Assessment"
-                    : "Security Assessment"}
+                  Security Assessment
                 </strong>
 
                 <span>
                   {isRunning
-                    ? "Security checks currently running"
-                    : "Security checks completed"}
+                    ? "Security checks currently running."
+                    : isFailed
+                      ? "Security tool execution failed."
+                      : "Security tool execution completed."}
                 </span>
               </div>
             </div>
 
+            {/* Analysis */}
+
             <div
               className={`execution-stage ${
-                scan.progress === 100 ? "completed" : "pending"
+                isCompleted
+                  ? "completed"
+                  : "pending"
               }`}
             >
               <span className="execution-stage-indicator">
-                {scan.progress === 100 ? "✓" : "○"}
+                {isCompleted ? "✓" : "○"}
               </span>
 
               <div>
                 <strong>Analysis</strong>
+
                 <span>
-                  Findings analysis and classification
+                  Findings analysis and
+                  classification.
                 </span>
               </div>
             </div>
@@ -372,17 +522,105 @@ export default function ScanDetails() {
         </section>
       </div>
 
+      {/* =====================================================
+          TOOL OUTPUT
+          ===================================================== */}
+
       <section className="card scan-activity-card">
         <div className="section-header">
           <div>
-            <h2>Scan Activity</h2>
+            <h2>Scan Output</h2>
+
             <p>
-              Recent events generated during this assessment.
+              Output returned by the security
+              tool.
             </p>
           </div>
 
           <span className="assessment-count">
-            {isRunning ? "Running" : "Completed"}
+            {isRunning
+              ? "Running"
+              : isFailed
+                ? "Failed"
+                : "Completed"}
+          </span>
+        </div>
+
+        <div className="scan-output-terminal">
+          <div className="scan-output-terminal-header">
+            <span>TERMINAL</span>
+
+            <span
+              className={
+                isFailed
+                  ? "scan-output-error"
+                  : "scan-output-success"
+              }
+            >
+              {isRunning
+                ? "Running"
+                : isFailed
+                  ? "Error"
+                  : "Completed"}
+            </span>
+          </div>
+
+          <div className="scan-output-terminal-body">
+            <div className="scan-output-command">
+              <span>$</span>
+
+              <span>
+                {validBackendScan.tool_id}{" "}
+                {validBackendScan.target}
+              </span>
+            </div>
+
+            {hasStdout ? (
+              <pre>
+                {validBackendScan.stdout}
+              </pre>
+            ) : (
+              <p className="scan-output-empty">
+                No standard output was returned.
+              </p>
+            )}
+
+            {hasStderr && (
+              <>
+                <div className="scan-output-divider">
+                  STDERR
+                </div>
+
+                <pre className="scan-output-stderr">
+                  {validBackendScan.stderr}
+                </pre>
+              </>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================
+          ACTIVITY
+          ===================================================== */}
+
+      <section className="card scan-activity-card">
+        <div className="section-header">
+          <div>
+            <h2>Scan Activity</h2>
+
+            <p>
+              Events generated during this
+              assessment.
+            </p>
+          </div>
+
+          <span className="assessment-count">
+            {isRunning
+              ? "Running"
+              : isFailed
+                ? "Failed"
+                : "Completed"}
           </span>
         </div>
 
@@ -391,32 +629,43 @@ export default function ScanDetails() {
             <span className="scan-activity-dot completed" />
 
             <div>
-              <strong>Target discovered</strong>
+              <strong>
+                Scan created
+              </strong>
+
               <span>
-                {scan.target} was successfully enumerated.
+                Heimdall created the security
+                assessment for{" "}
+                {scan.target}.
               </span>
             </div>
 
-            <time>09:43</time>
+            <time>Now</time>
           </div>
 
           <div className="scan-activity-item">
             <span className="scan-activity-dot completed" />
 
             <div>
-              <strong>Port and service discovery completed</strong>
+              <strong>
+                Security tool started
+              </strong>
+
               <span>
-                Identified accessible services and endpoints.
+                {validBackendScan.tool_id} was
+                selected for this assessment.
               </span>
             </div>
 
-            <time>09:47</time>
+            <time>Now</time>
           </div>
 
           <div className="scan-activity-item">
             <span
               className={`scan-activity-dot ${
-                isRunning ? "active" : "completed"
+                isRunning
+                  ? "active"
+                  : "completed"
               }`}
             />
 
@@ -424,81 +673,87 @@ export default function ScanDetails() {
               <strong>
                 {isRunning
                   ? "Security assessment in progress"
-                  : "Security assessment completed"}
+                  : isFailed
+                    ? "Security assessment failed"
+                    : "Security assessment completed"}
               </strong>
 
               <span>
                 {isRunning
-                  ? "Running configured security checks."
-                  : "All configured security checks have finished."}
+                  ? "The configured security tool is currently executing."
+                  : isFailed
+                    ? "The security tool returned a failure status."
+                    : "The configured security tool finished execution."}
               </span>
             </div>
 
-            <time>09:54</time>
+            <time>
+              {isRunning
+                ? "Running"
+                : "Done"}
+            </time>
           </div>
         </div>
       </section>
+
+      {/* =====================================================
+          FINDINGS
+          ===================================================== */}
 
       <section className="card scan-findings-card">
         <div className="section-header">
           <div>
             <h2>Findings</h2>
+
             <p>
-              Security findings discovered by this scan.
+              Security findings discovered by
+              this scan.
             </p>
           </div>
 
-          <Link to="/findings" className="section-link">
+          <Link
+            to="/findings"
+            className="section-link"
+          >
             View all →
           </Link>
         </div>
 
-        <div className="scan-finding-list">
-          <div className="scan-finding-item">
-            <span className="finding-severity critical">
-              Critical
-            </span>
+        {scan.findings === 0 ? (
+          <div className="scan-findings-empty">
+            <strong>
+              No findings recorded
+            </strong>
 
-            <div>
-              <strong>SQL Injection</strong>
-              <span>
-                Potential injection vulnerability discovered.
+            <span>
+              Heimdall has not generated any
+              security findings for this scan
+              yet.
+            </span>
+          </div>
+        ) : (
+          <div className="scan-finding-list">
+            <div className="scan-finding-item">
+              <span className="finding-severity critical">
+                Critical
+              </span>
+
+              <div>
+                <strong>
+                  Security Finding
+                </strong>
+
+                <span>
+                  View the finding details.
+                </span>
+              </div>
+
+              <span className="scan-finding-arrow">
+                →
               </span>
             </div>
-
-            <span className="scan-finding-arrow">→</span>
           </div>
-
-          <div className="scan-finding-item">
-            <span className="finding-severity high">
-              High
-            </span>
-
-            <div>
-              <strong>Authentication Bypass</strong>
-              <span>
-                Authentication control may be bypassed.
-              </span>
-            </div>
-
-            <span className="scan-finding-arrow">→</span>
-          </div>
-
-          <div className="scan-finding-item">
-            <span className="finding-severity medium">
-              Medium
-            </span>
-
-            <div>
-              <strong>Missing Security Headers</strong>
-              <span>
-                Recommended HTTP security headers are missing.
-              </span>
-            </div>
-
-            <span className="scan-finding-arrow">→</span>
-          </div>
-        </div>
+        )}
       </section>
     </div>
   );

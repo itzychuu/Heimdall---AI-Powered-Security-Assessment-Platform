@@ -3,485 +3,675 @@ import { invoke } from "@tauri-apps/api/core";
 import { useNavigate, useParams } from "react-router-dom";
 
 import {
-    Activity,
-    ArrowLeft,
-    Box,
-    Globe,
-    KeyRound,
-    Network,
-    Search,
-    ShieldAlert,
-    Terminal,
-    Wifi,
+  Activity,
+  ArrowLeft,
+  Box,
+  Globe,
+  KeyRound,
+  Network,
+  Search,
+  ShieldAlert,
+  Terminal,
+  Wifi,
 } from "lucide-react";
 
 import { tools } from "../data/tools";
 import type {
-    ToolCategory,
-    ToolStatus,
+  ToolCategory,
+  ToolStatus,
 } from "../types/tool";
 
 import "../styles/tool-details.css";
 
 interface ToolDetectionResult {
-    tool_id: string;
-    installed: boolean;
-    executable: string | null;
-    version: string | null;
+  tool_id: string;
+  installed: boolean;
+  executable: string | null;
+  version: string | null;
 }
 
 interface ToolExecutionResult {
-    tool_id: string;
-    stdout: string;
-    stderr: string;
-    exit_code: number | null;
+  tool_id: string;
+  stdout: string;
+  stderr: string;
+  exit_code: number | null;
+}
+
+interface ToolInstallationResult {
+  tool_id: string;
+  stdout: string;
+  stderr: string;
+  exit_code: number | null;
 }
 
 function ToolIcon({
-    category,
+  category,
 }: {
-    category: ToolCategory;
+  category: ToolCategory;
 }) {
-    if (category === "Network") {
-        return <Network size={24} />;
-    }
+  if (category === "Network") {
+    return <Network size={24} />;
+  }
 
-    if (category === "Web") {
-        return <Globe size={24} />;
-    }
+  if (category === "Web") {
+    return <Globe size={24} />;
+  }
 
-    if (category === "Enumeration") {
-        return <Search size={24} />;
-    }
+  if (category === "Enumeration") {
+    return <Search size={24} />;
+  }
 
-    if (category === "Password") {
-        return <KeyRound size={24} />;
-    }
+  if (category === "Password") {
+    return <KeyRound size={24} />;
+  }
 
-    if (category === "Vulnerability") {
-        return <ShieldAlert size={24} />;
-    }
+  if (category === "Vulnerability") {
+    return <ShieldAlert size={24} />;
+  }
 
-    if (category === "Wireless") {
-        return <Wifi size={24} />;
-    }
+  if (category === "Wireless") {
+    return <Wifi size={24} />;
+  }
 
-    if (category === "Forensics") {
-        return <Activity size={24} />;
-    }
+  if (category === "Forensics") {
+    return <Activity size={24} />;
+  }
 
-    return <Box size={24} />;
+  return <Box size={24} />;
 }
 
 function ToolStatus({
-    status,
+  status,
 }: {
-    status: ToolStatus;
+  status: ToolStatus;
 }) {
-    const statusClass = status
-        .toLowerCase()
-        .replace(/\s+/g, "-");
+  const statusClass = status
+    .toLowerCase()
+    .replace(/\s+/g, "-");
 
-    return (
-        <span
-            className={`tool-details-status tool-details-status-${statusClass}`}
-        >
-            <span className="tool-details-status-dot" />
-            {status}
-        </span>
-    );
+  return (
+    <span
+      className={`tool-details-status tool-details-status-${statusClass}`}
+    >
+      <span className="tool-details-status-dot" />
+      {status}
+    </span>
+  );
 }
 
 export default function ToolDetails() {
-    const { toolId } = useParams();
-    const navigate = useNavigate();
+  const { toolId } = useParams();
+  const navigate = useNavigate();
 
-    const [detection, setDetection] =
-        useState<ToolDetectionResult | null>(null);
+  const [detection, setDetection] =
+    useState<ToolDetectionResult | null>(null);
 
-    const [isDetecting, setIsDetecting] =
-        useState(true);
+  const [isDetecting, setIsDetecting] =
+    useState(true);
 
-    const [isRunning, setIsRunning] =
-        useState(false);
+  const [isInstalling, setIsInstalling] =
+    useState(false);
 
-    const [output, setOutput] = useState("");
+  const [isRunning, setIsRunning] =
+    useState(false);
 
-    const [error, setError] = useState("");
+  const [output, setOutput] = useState("");
 
-    const tool = tools.find(
-        (item) => item.id === toolId,
-    );
+  const [error, setError] = useState("");
 
-    useEffect(() => {
-        if (!tool) {
-            return;
-        }
+  const [installationOutput, setInstallationOutput] =
+    useState("");
 
-        const currentToolId = tool.id;
+  const [installationError, setInstallationError] =
+    useState("");
 
-        let cancelled = false;
+  const tool = tools.find(
+    (item) => item.id === toolId,
+  );
 
-        async function detectTool() {
-            try {
-                setIsDetecting(true);
-
-                const results =
-                    await invoke<ToolDetectionResult[]>(
-                        "detect_tools",
-                    );
-
-                if (cancelled) {
-                    return;
-                }
-
-                const result = results.find(
-                    (item) => item.tool_id === currentToolId,
-                );
-
-                setDetection(result ?? null);
-            } catch (error) {
-                console.error(
-                    "Failed to detect tool:",
-                    error,
-                );
-            } finally {
-                if (!cancelled) {
-                    setIsDetecting(false);
-                }
-            }
-        }
-
-        detectTool();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [tool]);
-
+  useEffect(() => {
     if (!tool) {
-        return (
-            <div className="page tool-details-page">
-                <button
-                    className="tool-details-back"
-                    onClick={() => navigate("/tools")}
-                >
-                    <ArrowLeft size={16} />
-                    Back to Tools
-                </button>
-
-                <section className="card tool-not-found">
-                    <div className="tool-not-found-icon">
-                        ?
-                    </div>
-
-                    <h1>Tool not found</h1>
-
-                    <p>
-                        The requested security tool could not be
-                        found.
-                    </p>
-
-                    <button
-                        className="primary-button"
-                        onClick={() => navigate("/tools")}
-                    >
-                        Return to Tools
-                    </button>
-                </section>
-            </div>
-        );
+      return;
     }
 
-    const actualStatus: ToolStatus =
-        detection?.installed
-            ? "Installed"
-            : isDetecting
-                ? "Unknown"
-                : "Not Installed";
+    const currentToolId = tool.id;
 
-    const actualVersion =
-        detection?.version ?? tool.version ?? null;
+    let cancelled = false;
 
-    const executablePath =
-        detection?.executable ?? null;
+    async function detectTool() {
+      try {
+        setIsDetecting(true);
 
-    const canRun =
-        actualStatus === "Installed" &&
-        !isRunning;
+        const results =
+          await invoke<ToolDetectionResult[]>(
+            "detect_tools",
+          );
 
-    const runTool = async () => {
-        if (!canRun) {
-            return;
+        if (cancelled) {
+          return;
         }
 
-        setIsRunning(true);
-        setOutput("");
-        setError("");
+        const result = results.find(
+          (item) => item.tool_id === currentToolId,
+        );
 
-        try {
-            const result =
-                await invoke<ToolExecutionResult>(
-                    "run_security_tool",
-                    {
-                        toolId: tool.id,
-                        args: ["--version"],
-                    },
-                );
-
-            const combinedOutput = [
-                result.stdout,
-                result.stderr,
-            ]
-                .filter(Boolean)
-                .join("\n");
-
-            setOutput(
-                combinedOutput ||
-                `Process exited with code ${result.exit_code ?? "unknown"
-                }.`,
-            );
-        } catch (error) {
-            setError(String(error));
-        } finally {
-            setIsRunning(false);
+        setDetection(result ?? null);
+      } catch (error) {
+        console.error(
+          "Failed to detect tool:",
+          error,
+        );
+      } finally {
+        if (!cancelled) {
+          setIsDetecting(false);
         }
+      }
+    }
+
+    detectTool();
+
+    return () => {
+      cancelled = true;
     };
+  }, [tool]);
 
+  if (!tool) {
     return (
-        <div className="page tool-details-page">
-            {/* Back */}
-            <button
-                className="tool-details-back"
-                onClick={() => navigate("/tools")}
-            >
-                <ArrowLeft size={16} />
-                Back to Tools
-            </button>
+      <div className="page tool-details-page">
+        <button
+          className="tool-details-back"
+          onClick={() => navigate("/tools")}
+        >
+          <ArrowLeft size={16} />
+          Back to Tools
+        </button>
 
-            {/* Header */}
-            <div className="tool-details-header">
-                <div className="tool-details-title-section">
-                    <div className="tool-details-icon">
-                        <ToolIcon category={tool.category} />
-                    </div>
+        <section className="card tool-not-found">
+          <div className="tool-not-found-icon">
+            ?
+          </div>
 
-                    <div>
-                        <div className="tool-details-title-row">
-                            <h1>{tool.name}</h1>
+          <h1>Tool not found</h1>
 
-                            <span className="tool-details-category">
-                                {tool.category}
-                            </span>
+          <p>
+            The requested security tool could not be
+            found.
+          </p>
 
-                            <ToolStatus status={actualStatus} />
-                        </div>
-
-                        <p className="tool-details-command">
-                            <Terminal size={14} />
-
-                            <code>{tool.command}</code>
-
-                            {actualVersion && (
-                                <span>{actualVersion}</span>
-                            )}
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Overview */}
-            <section className="card tool-details-card">
-                <div className="section-heading">
-                    <h2>Tool Overview</h2>
-
-                    <p>
-                        Information and configuration details for this
-                        security tool.
-                    </p>
-                </div>
-
-                <div className="tool-overview-grid">
-                    <div className="tool-overview-item">
-                        <span>Name</span>
-
-                        <strong>{tool.name}</strong>
-                    </div>
-
-                    <div className="tool-overview-item">
-                        <span>Category</span>
-
-                        <strong>{tool.category}</strong>
-                    </div>
-
-                    <div className="tool-overview-item">
-                        <span>Command</span>
-
-                        <strong className="tool-monospace">
-                            {tool.command}
-                        </strong>
-                    </div>
-
-                    <div className="tool-overview-item">
-                        <span>Version</span>
-
-                        <strong>
-                            {actualVersion
-                                ? actualVersion
-                                : "Unknown"}
-                        </strong>
-                    </div>
-
-                    <div className="tool-overview-item">
-                        <span>Status</span>
-
-                        <ToolStatus status={actualStatus} />
-                    </div>
-
-                    <div className="tool-overview-item">
-                        <span>Executable</span>
-
-                        <strong className="tool-monospace">
-                            {executablePath ?? "Not detected"}
-                        </strong>
-                    </div>
-                </div>
-            </section>
-
-            {/* Description */}
-            <section className="card tool-details-card">
-                <div className="section-heading">
-                    <h2>Description</h2>
-
-                    <p>
-                        Summary of the security tool and its primary
-                        purpose.
-                    </p>
-                </div>
-
-                <div className="tool-details-content">
-                    <p>{tool.description}</p>
-                </div>
-            </section>
-
-            {/* Execution */}
-            <section className="card tool-details-card">
-                <div className="section-heading">
-                    <h2>Tool Execution</h2>
-
-                    <p>
-                        Execute {tool.name} against an authorized target.
-                    </p>
-                </div>
-
-                <div className="tool-execution">
-                    <div className="tool-command-preview">
-                        <div className="tool-command-preview-label">
-                            COMMAND
-                        </div>
-
-                        <div className="tool-command-preview-value">
-                            <span>$</span>
-
-                            <code>{tool.command}</code>
-
-                            <span className="tool-command-placeholder">
-                                [arguments]
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="tool-execution-actions">
-                        <button
-                            className="primary-button"
-                            disabled={!canRun}
-                            onClick={runTool}
-                        >
-                            <Terminal size={16} />
-
-                            {isRunning
-                                ? "Running..."
-                                : actualStatus === "Not Installed"
-                                    ? "Tool Not Installed"
-                                    : "Run Tool"}
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            {/* Output */}
-            <section className="card tool-details-card">
-                <div className="section-heading">
-                    <h2>Output</h2>
-
-                    <p>
-                        Command output will appear here after execution.
-                    </p>
-                </div>
-
-                <div className="tool-terminal">
-                    <div className="tool-terminal-header">
-                        <span>TERMINAL</span>
-
-                        <span className="tool-terminal-status">
-                            {isRunning
-                                ? "Running"
-                                : error
-                                    ? "Error"
-                                    : output
-                                        ? "Completed"
-                                        : "Ready"}
-                        </span>
-                    </div>
-
-                    <div className="tool-terminal-body">
-                        <div className="tool-terminal-command">
-                            <span className="tool-terminal-prompt">
-                                $
-                            </span>
-
-                            <span>
-                                {tool.command} --version
-                            </span>
-                        </div>
-
-                        {isRunning && (
-                            <div className="tool-terminal-running">
-                                Executing...
-                            </div>
-                        )}
-
-                        {output && (
-                            <pre className="tool-terminal-output">
-                                {output}
-                            </pre>
-                        )}
-
-                        {error && (
-                            <pre className="tool-terminal-error">
-                                {error}
-                            </pre>
-                        )}
-
-                        {!isRunning &&
-                            !output &&
-                            !error && (
-                                <span className="tool-terminal-cursor" />
-                            )}
-                    </div>
-                </div>
-            </section>
-
-            {/* Footer */}
-            <div className="tool-details-footer">
-                <button
-                    className="secondary-button"
-                    onClick={() => navigate("/tools")}
-                >
-                    <ArrowLeft size={15} />
-                    Back to Tools
-                </button>
-            </div>
-        </div>
+          <button
+            className="primary-button"
+            onClick={() => navigate("/tools")}
+          >
+            Return to Tools
+          </button>
+        </section>
+      </div>
     );
+  }
+
+  const actualStatus: ToolStatus =
+    detection?.installed
+      ? "Installed"
+      : isDetecting
+        ? "Unknown"
+        : "Not Installed";
+
+  const actualVersion =
+    detection?.version ?? tool.version ?? null;
+
+  const executablePath =
+    detection?.executable ?? null;
+
+  const canRun =
+    actualStatus === "Installed" &&
+    !isRunning &&
+    !isInstalling;
+
+  const canInstall =
+    actualStatus === "Not Installed" &&
+    !isInstalling &&
+    !isRunning;
+
+  const hasAutomaticInstaller =
+    tool.id === "nmap";
+
+  const runTool = async () => {
+    if (!canRun) {
+      return;
+    }
+
+    setIsRunning(true);
+    setOutput("");
+    setError("");
+
+    try {
+      const result =
+        await invoke<ToolExecutionResult>(
+          "run_security_tool",
+          {
+            toolId: tool.id,
+            args: ["--version"],
+          },
+        );
+
+      const combinedOutput = [
+        result.stdout,
+        result.stderr,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      setOutput(
+        combinedOutput ||
+          `Process exited with code ${
+            result.exit_code ?? "unknown"
+          }.`,
+      );
+    } catch (error) {
+      setError(String(error));
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  const installTool = async () => {
+    if (!canInstall || !hasAutomaticInstaller) {
+      return;
+    }
+
+    setIsInstalling(true);
+    setInstallationOutput("");
+    setInstallationError("");
+    setOutput("");
+    setError("");
+
+    try {
+      const result =
+        await invoke<ToolInstallationResult>(
+          "install_tool",
+          {
+            toolId: tool.id,
+          },
+        );
+
+      const combinedOutput = [
+        result.stdout,
+        result.stderr,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      setInstallationOutput(
+        combinedOutput ||
+          `Installer exited with code ${
+            result.exit_code ?? "unknown"
+          }.`,
+      );
+
+      if (result.exit_code !== 0) {
+        setInstallationError(
+          `Installation failed with exit code ${
+            result.exit_code ?? "unknown"
+          }.`,
+        );
+
+        return;
+      }
+
+      /*
+       * Give Windows a moment to update PATH and finish
+       * registering the newly installed executable.
+       */
+      await new Promise((resolve) =>
+        setTimeout(resolve, 1000),
+      );
+
+      const results =
+        await invoke<ToolDetectionResult[]>(
+          "detect_tools",
+        );
+
+      const updatedDetection = results.find(
+        (item) => item.tool_id === tool.id,
+      );
+
+      setDetection(updatedDetection ?? null);
+
+      if (!updatedDetection?.installed) {
+        setInstallationError(
+          "The installation command completed, but Heimdall could not detect the tool yet.",
+        );
+      }
+    } catch (error) {
+      setInstallationError(String(error));
+    } finally {
+      setIsInstalling(false);
+    }
+  };
+
+  const terminalStatus = isInstalling
+    ? "Installing"
+    : isRunning
+      ? "Running"
+      : installationError || error
+        ? "Error"
+        : installationOutput || output
+          ? "Completed"
+          : "Ready";
+
+  return (
+    <div className="page tool-details-page">
+      {/* Back */}
+      <button
+        className="tool-details-back"
+        onClick={() => navigate("/tools")}
+      >
+        <ArrowLeft size={16} />
+        Back to Tools
+      </button>
+
+      {/* Header */}
+      <div className="tool-details-header">
+        <div className="tool-details-title-section">
+          <div className="tool-details-icon">
+            <ToolIcon category={tool.category} />
+          </div>
+
+          <div>
+            <div className="tool-details-title-row">
+              <h1>{tool.name}</h1>
+
+              <span className="tool-details-category">
+                {tool.category}
+              </span>
+
+              <ToolStatus status={actualStatus} />
+            </div>
+
+            <p className="tool-details-command">
+              <Terminal size={14} />
+
+              <code>{tool.command}</code>
+
+              {actualVersion && (
+                <span>{actualVersion}</span>
+              )}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Overview */}
+      <section className="card tool-details-card">
+        <div className="section-heading">
+          <h2>Tool Overview</h2>
+
+          <p>
+            Information and configuration details for this
+            security tool.
+          </p>
+        </div>
+
+        <div className="tool-overview-grid">
+          <div className="tool-overview-item">
+            <span>Name</span>
+            <strong>{tool.name}</strong>
+          </div>
+
+          <div className="tool-overview-item">
+            <span>Category</span>
+            <strong>{tool.category}</strong>
+          </div>
+
+          <div className="tool-overview-item">
+            <span>Command</span>
+            <strong className="tool-monospace">
+              {tool.command}
+            </strong>
+          </div>
+
+          <div className="tool-overview-item">
+            <span>Version</span>
+            <strong>
+              {actualVersion
+                ? actualVersion
+                : "Unknown"}
+            </strong>
+          </div>
+
+          <div className="tool-overview-item">
+            <span>Status</span>
+            <ToolStatus status={actualStatus} />
+          </div>
+
+          <div className="tool-overview-item">
+            <span>Executable</span>
+
+            <strong className="tool-monospace">
+              {executablePath ?? "Not detected"}
+            </strong>
+          </div>
+        </div>
+      </section>
+
+      {/* Description */}
+      <section className="card tool-details-card">
+        <div className="section-heading">
+          <h2>Description</h2>
+
+          <p>
+            Summary of the security tool and its primary
+            purpose.
+          </p>
+        </div>
+
+        <div className="tool-details-content">
+          <p>{tool.description}</p>
+        </div>
+      </section>
+
+      {/* Installation */}
+      {actualStatus === "Not Installed" && (
+        <section className="card tool-details-card">
+          <div className="section-heading">
+            <h2>Tool Installation</h2>
+
+            <p>
+              Install {tool.name} and make it available to
+              Heimdall.
+            </p>
+          </div>
+
+          <div className="tool-execution">
+            <div className="tool-command-preview">
+              <div className="tool-command-preview-label">
+                INSTALLATION
+              </div>
+
+              <div className="tool-command-preview-value">
+                <span>$</span>
+
+                <code>
+                  {hasAutomaticInstaller
+                    ? `winget install --id Insecure.Nmap --exact`
+                    : "Manual installation required"}
+                </code>
+              </div>
+            </div>
+
+            <div className="tool-execution-actions">
+              {hasAutomaticInstaller ? (
+                <button
+                  className="primary-button"
+                  disabled={!canInstall}
+                  onClick={installTool}
+                >
+                  <Terminal size={16} />
+
+                  {isInstalling
+                    ? "Installing..."
+                    : "Install Tool"}
+                </button>
+              ) : (
+                <button
+                  className="primary-button"
+                  disabled
+                >
+                  Manual Installation Required
+                </button>
+              )}
+            </div>
+          </div>
+
+          {installationOutput && (
+            <div className="tool-terminal">
+              <div className="tool-terminal-header">
+                <span>INSTALLER OUTPUT</span>
+
+                <span className="tool-terminal-status">
+                  {installationError
+                    ? "Error"
+                    : "Completed"}
+                </span>
+              </div>
+
+              <div className="tool-terminal-body">
+                <pre className="tool-terminal-output">
+                  {installationOutput}
+                </pre>
+
+                {installationError && (
+                  <pre className="tool-terminal-error">
+                    {installationError}
+                  </pre>
+                )}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Execution */}
+      <section className="card tool-details-card">
+        <div className="section-heading">
+          <h2>Tool Execution</h2>
+
+          <p>
+            Execute {tool.name} against an authorized target.
+          </p>
+        </div>
+
+        <div className="tool-execution">
+          <div className="tool-command-preview">
+            <div className="tool-command-preview-label">
+              COMMAND
+            </div>
+
+            <div className="tool-command-preview-value">
+              <span>$</span>
+
+              <code>{tool.command}</code>
+
+              <span className="tool-command-placeholder">
+                [arguments]
+              </span>
+            </div>
+          </div>
+
+          <div className="tool-execution-actions">
+            <button
+              className="primary-button"
+              disabled={!canRun}
+              onClick={runTool}
+            >
+              <Terminal size={16} />
+
+              {isRunning
+                ? "Running..."
+                : actualStatus === "Not Installed"
+                  ? "Tool Not Installed"
+                  : actualStatus === "Unknown"
+                    ? "Checking..."
+                    : "Run Tool"}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Output */}
+      <section className="card tool-details-card">
+        <div className="section-heading">
+          <h2>Output</h2>
+
+          <p>
+            Command output will appear here after execution.
+          </p>
+        </div>
+
+        <div className="tool-terminal">
+          <div className="tool-terminal-header">
+            <span>TERMINAL</span>
+
+            <span className="tool-terminal-status">
+              {terminalStatus}
+            </span>
+          </div>
+
+          <div className="tool-terminal-body">
+            <div className="tool-terminal-command">
+              <span className="tool-terminal-prompt">
+                $
+              </span>
+
+              <span>
+                {tool.command} --version
+              </span>
+            </div>
+
+            {isRunning && (
+              <div className="tool-terminal-running">
+                Executing...
+              </div>
+            )}
+
+            {isInstalling && (
+              <div className="tool-terminal-running">
+                Installing {tool.name}...
+              </div>
+            )}
+
+            {output && (
+              <pre className="tool-terminal-output">
+                {output}
+              </pre>
+            )}
+
+            {error && (
+              <pre className="tool-terminal-error">
+                {error}
+              </pre>
+            )}
+
+            {!isRunning &&
+              !isInstalling &&
+              !output &&
+              !error && (
+                <span className="tool-terminal-cursor" />
+              )}
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <div className="tool-details-footer">
+        <button
+          className="secondary-button"
+          onClick={() => navigate("/tools")}
+        >
+          <ArrowLeft size={15} />
+          Back to Tools
+        </button>
+      </div>
+    </div>
+  );
 }

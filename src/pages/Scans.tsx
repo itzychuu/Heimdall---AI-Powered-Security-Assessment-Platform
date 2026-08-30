@@ -161,10 +161,10 @@ export default function Scans() {
           </p>
         </div>
 
-        <button className="primary-button">
+        <Link to="/scans/new" className="primary-button">
           <span>+</span>
           New Scan
-        </button>
+        </Link>
       </div>
 
       <section className="card scans-card">

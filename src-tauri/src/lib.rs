@@ -1,5 +1,6 @@
 mod commands;
 mod process;
+mod scans;
 mod tools;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -9,7 +10,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::tools::detect_tools,
             commands::tools::install_tool,
-            commands::tools::run_security_tool
+            commands::tools::run_security_tool,
+            commands::scans::start_scan
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
