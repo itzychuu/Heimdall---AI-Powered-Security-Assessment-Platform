@@ -1,4 +1,6 @@
-import { Link, useLocation, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { Link, useParams } from "react-router-dom";
 
 import type { Scan } from "../types/scan";
 
@@ -13,10 +15,6 @@ interface BackendScanResult {
   stdout: string;
   stderr: string;
   exit_code: number | null;
-}
-
-interface ScanExecutionState {
-  scan?: BackendScanResult;
 }
 
 function ScanIcon() {
@@ -89,64 +87,130 @@ function normalizeStatus(
 export default function ScanDetails() {
   const { scanId } = useParams<{ scanId: string }>();
 
-  const location = useLocation();
+  const [backendScan, setBackendScan] =
+    useState<BackendScanResult | null>(null);
 
-  const state = location.state as ScanExecutionState | null;
+  const [isLoading, setIsLoading] =
+    useState(true);
 
-  const backendScan = state?.scan;
+  const [, setLoadError] =
+    useState("");
 
-  /*
-   * The New Scan page passes the real scan result through
-   * React Router navigation state.
-   *
-   * We also verify that the ID in the URL matches the
-   * scan returned by the backend.
-   */
-  const validBackendScan =
-    backendScan &&
-    (!scanId || backendScan.scan_id === scanId)
-      ? backendScan
-      : undefined;
+  useEffect(() => {
+    if (!scanId) {
+      setLoadError("No scan ID was provided.");
+      setIsLoading(false);
+      return;
+    }
 
-  const scan: Scan | undefined = validBackendScan
-    ? {
-        id: validBackendScan.scan_id,
+    let cancelled = false;
 
-        name: validBackendScan.name,
+    async function loadScan() {
+      try {
+        setIsLoading(true);
+        setLoadError("");
 
-        target: validBackendScan.target,
+        const result =
+          await invoke<BackendScanResult | null>(
+            "get_scan",
+            {
+              scanId,
+            },
+          );
 
-        targetType: normalizeTargetType(
-          validBackendScan.target_type,
-        ),
+        if (cancelled) {
+          return;
+        }
 
-        project: validBackendScan.project,
+        if (!result) {
+          setBackendScan(null);
+          return;
+        }
 
-        progress:
-          normalizeStatus(validBackendScan.status) ===
-          "Completed"
-            ? 100
-            : 0,
+        setBackendScan(result);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
 
-        status: normalizeStatus(
-          validBackendScan.status,
-        ),
+        console.error(
+          "Failed to load scan:",
+          error,
+        );
 
-        startedAt: "Just now",
-
-        duration:
-          normalizeStatus(validBackendScan.status) ===
-          "Completed"
-            ? "Completed"
-            : "In progress",
-
-        findings: 0,
-
-        critical: 0,
+        setLoadError(String(error));
+        setBackendScan(null);
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
+    }
+
+    loadScan();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [scanId]);
+
+  const scan: Scan | undefined = backendScan
+    ? {
+      id: backendScan.scan_id,
+
+      name: backendScan.name,
+
+      target: backendScan.target,
+
+      targetType: normalizeTargetType(
+        backendScan.target_type,
+      ),
+
+      project: backendScan.project,
+
+      progress:
+        normalizeStatus(backendScan.status) ===
+          "Completed"
+          ? 100
+          : 0,
+
+      status: normalizeStatus(
+        backendScan.status,
+      ),
+
+      startedAt: "Just now",
+
+      duration:
+        normalizeStatus(backendScan.status) ===
+          "Completed"
+          ? "Completed"
+          : "In progress",
+
+      findings: 0,
+
+      critical: 0,
+    }
     : undefined;
 
-  if (!scan || !validBackendScan) {
+  if (isLoading) {
+    return (
+      <div className="page scan-details-page">
+        <Link to="/scans" className="back-link">
+          ← Back to Scans
+        </Link>
+
+        <div className="card not-found-card">
+          <h2>Loading scan...</h2>
+
+          <p>
+            Heimdall is loading the security assessment.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!scan || !backendScan) {
     return (
       <div className="page scan-details-page">
         <Link to="/scans" className="back-link">
@@ -181,10 +245,10 @@ export default function ScanDetails() {
     scan.status === "Failed";
 
   const hasStdout =
-    validBackendScan.stdout.trim().length > 0;
+    backendScan.stdout.trim().length > 0;
 
   const hasStderr =
-    validBackendScan.stderr.trim().length > 0;
+    backendScan.stderr.trim().length > 0;
 
   return (
     <div className="page scan-details-page">
@@ -365,7 +429,7 @@ export default function ScanDetails() {
               <span>Security Tool</span>
 
               <strong>
-                {validBackendScan.tool_id}
+                {backendScan.tool_id}
               </strong>
             </div>
 
@@ -379,7 +443,7 @@ export default function ScanDetails() {
               <span>Exit Code</span>
 
               <strong>
-                {validBackendScan.exit_code ??
+                {backendScan.exit_code ??
                   "Not available"}
               </strong>
             </div>
@@ -446,11 +510,10 @@ export default function ScanDetails() {
             {/* Discovery */}
 
             <div
-              className={`execution-stage ${
-                isFailed
-                  ? "completed"
-                  : "completed"
-              }`}
+              className={`execution-stage ${isFailed
+                ? "completed"
+                : "completed"
+                }`}
             >
               <span className="execution-stage-indicator">
                 ✓
@@ -469,13 +532,12 @@ export default function ScanDetails() {
             {/* Security Assessment */}
 
             <div
-              className={`execution-stage ${
-                isRunning
-                  ? "active"
-                  : isFailed
-                    ? "completed"
-                    : "completed"
-              }`}
+              className={`execution-stage ${isRunning
+                ? "active"
+                : isFailed
+                  ? "completed"
+                  : "completed"
+                }`}
             >
               <span className="execution-stage-indicator">
                 {isRunning ? "•" : "✓"}
@@ -499,11 +561,10 @@ export default function ScanDetails() {
             {/* Analysis */}
 
             <div
-              className={`execution-stage ${
-                isCompleted
-                  ? "completed"
-                  : "pending"
-              }`}
+              className={`execution-stage ${isCompleted
+                ? "completed"
+                : "pending"
+                }`}
             >
               <span className="execution-stage-indicator">
                 {isCompleted ? "✓" : "○"}
@@ -570,14 +631,14 @@ export default function ScanDetails() {
               <span>$</span>
 
               <span>
-                {validBackendScan.tool_id}{" "}
-                {validBackendScan.target}
+                {backendScan.tool_id}{" "}
+                {backendScan.target}
               </span>
             </div>
 
             {hasStdout ? (
               <pre>
-                {validBackendScan.stdout}
+                {backendScan.stdout}
               </pre>
             ) : (
               <p className="scan-output-empty">
@@ -592,7 +653,7 @@ export default function ScanDetails() {
                 </div>
 
                 <pre className="scan-output-stderr">
-                  {validBackendScan.stderr}
+                  {backendScan.stderr}
                 </pre>
               </>
             )}
@@ -652,7 +713,7 @@ export default function ScanDetails() {
               </strong>
 
               <span>
-                {validBackendScan.tool_id} was
+                {backendScan.tool_id} was
                 selected for this assessment.
               </span>
             </div>
@@ -662,11 +723,10 @@ export default function ScanDetails() {
 
           <div className="scan-activity-item">
             <span
-              className={`scan-activity-dot ${
-                isRunning
-                  ? "active"
-                  : "completed"
-              }`}
+              className={`scan-activity-dot ${isRunning
+                ? "active"
+                : "completed"
+                }`}
             />
 
             <div>

@@ -1,7 +1,9 @@
 use serde::Serialize;
+use tauri::AppHandle;
 
 use crate::scans::models::{ScanConfig, ScanResult};
 use crate::scans::runner;
+use crate::scans::store;
 
 #[derive(Debug, Serialize)]
 pub struct ScanExecutionResult {
@@ -10,6 +12,7 @@ pub struct ScanExecutionResult {
 
 #[tauri::command]
 pub async fn start_scan(
+    app: AppHandle,
     config: ScanConfig,
 ) -> Result<ScanExecutionResult, String> {
     let result = tauri::async_runtime::spawn_blocking(
@@ -23,7 +26,24 @@ pub async fn start_scan(
         )
     })??;
 
+    store::save_scan(&app, &result)?;
+
     Ok(ScanExecutionResult {
         scan: result,
     })
+}
+
+#[tauri::command]
+pub async fn get_scan(
+    app: AppHandle,
+    scan_id: String,
+) -> Result<Option<ScanResult>, String> {
+    store::get_scan(&app, &scan_id)
+}
+
+#[tauri::command]
+pub async fn list_scans(
+    app: AppHandle,
+) -> Result<Vec<ScanResult>, String> {
+    store::list_scans(&app)
 }

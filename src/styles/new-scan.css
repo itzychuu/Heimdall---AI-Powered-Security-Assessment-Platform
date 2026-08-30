@@ -143,3 +143,36 @@
     width: 100%;
   }
 }
+
+#scan-arguments {
+    width: 100%;
+    min-height: 110px;
+    resize: vertical;
+    font-family: "JetBrains Mono", "Cascadia Code", monospace;
+}
+
+.command-preview {
+    margin-top: 20px;
+    padding: 18px;
+    border: 1px solid #292929;
+    border-radius: 8px;
+    background: #0a0a0a;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.command-preview span {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #777;
+}
+
+.command-preview code {
+    color: #d6b15a;
+    font-family: "JetBrains Mono", "Cascadia Code", monospace;
+    font-size: 14px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}

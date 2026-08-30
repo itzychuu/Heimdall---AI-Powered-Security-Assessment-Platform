@@ -11,7 +11,9 @@ pub fn run() {
             commands::tools::detect_tools,
             commands::tools::install_tool,
             commands::tools::run_security_tool,
-            commands::scans::start_scan
+            commands::scans::start_scan,
+            commands::scans::get_scan,
+            commands::scans::list_scans
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,6 +1,12 @@
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
+pub enum TargetStrategy {
+    Append,
+    Flag(&'static str),
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct ToolDefinition {
     pub id: &'static str,
     pub name: &'static str,
@@ -10,6 +16,8 @@ pub struct ToolDefinition {
 
     pub windows_package_manager: Option<&'static str>,
     pub windows_package_id: Option<&'static str>,
+
+    pub target_strategy: TargetStrategy,
 }
 
 pub const TOOLS: &[ToolDefinition] = &[
@@ -23,6 +31,8 @@ pub const TOOLS: &[ToolDefinition] = &[
 
         windows_package_manager: Some("winget"),
         windows_package_id: Some("Insecure.Nmap"),
+
+        target_strategy: TargetStrategy::Append,
     },
 
     ToolDefinition {
@@ -35,6 +45,8 @@ pub const TOOLS: &[ToolDefinition] = &[
 
         windows_package_manager: None,
         windows_package_id: None,
+
+        target_strategy: TargetStrategy::Flag("-u"),
     },
 
     ToolDefinition {
@@ -47,6 +59,8 @@ pub const TOOLS: &[ToolDefinition] = &[
 
         windows_package_manager: None,
         windows_package_id: None,
+
+        target_strategy: TargetStrategy::Flag("-h"),
     },
 
     ToolDefinition {
@@ -59,6 +73,8 @@ pub const TOOLS: &[ToolDefinition] = &[
 
         windows_package_manager: None,
         windows_package_id: None,
+
+        target_strategy: TargetStrategy::Flag("-u"),
     },
 
     ToolDefinition {
@@ -71,6 +87,8 @@ pub const TOOLS: &[ToolDefinition] = &[
 
         windows_package_manager: None,
         windows_package_id: None,
+
+        target_strategy: TargetStrategy::Append,
     },
 
     ToolDefinition {
@@ -83,6 +101,8 @@ pub const TOOLS: &[ToolDefinition] = &[
 
         windows_package_manager: None,
         windows_package_id: None,
+
+        target_strategy: TargetStrategy::Append,
     },
 
     ToolDefinition {
@@ -95,6 +115,8 @@ pub const TOOLS: &[ToolDefinition] = &[
 
         windows_package_manager: None,
         windows_package_id: None,
+
+        target_strategy: TargetStrategy::Flag("-u"),
     },
 
     ToolDefinition {
@@ -107,6 +129,8 @@ pub const TOOLS: &[ToolDefinition] = &[
 
         windows_package_manager: None,
         windows_package_id: None,
+
+        target_strategy: TargetStrategy::Flag("-u"),
     },
 
     ToolDefinition {
@@ -119,6 +143,8 @@ pub const TOOLS: &[ToolDefinition] = &[
 
         windows_package_manager: None,
         windows_package_id: None,
+
+        target_strategy: TargetStrategy::Append,
     },
 
     ToolDefinition {
@@ -131,6 +157,8 @@ pub const TOOLS: &[ToolDefinition] = &[
 
         windows_package_manager: None,
         windows_package_id: None,
+
+        target_strategy: TargetStrategy::Append,
     },
 
     ToolDefinition {
@@ -143,6 +171,8 @@ pub const TOOLS: &[ToolDefinition] = &[
 
         windows_package_manager: None,
         windows_package_id: None,
+
+        target_strategy: TargetStrategy::Append,
     },
 
     ToolDefinition {
@@ -155,6 +185,8 @@ pub const TOOLS: &[ToolDefinition] = &[
 
         windows_package_manager: None,
         windows_package_id: None,
+
+        target_strategy: TargetStrategy::Append,
     },
 ];
 

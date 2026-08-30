@@ -1,12 +1,14 @@
 use crate::process::executor;
 use crate::tools::detector;
-use crate::tools::registry;
+use crate::tools::registry::{
+    self,
+    TargetStrategy,
+};
 
 use super::models::{
     ScanConfig,
     ScanResult,
     ScanStatus,
-    ScanType,
 };
 
 pub fn run(config: &ScanConfig) -> Result<ScanResult, String> {
@@ -38,7 +40,7 @@ pub fn run(config: &ScanConfig) -> Result<ScanResult, String> {
             )
         })?;
 
-    let args = build_arguments(config)?;
+    let args = build_arguments(config, tool)?;
 
     let result = executor::execute(
         &executable,
@@ -90,53 +92,47 @@ fn validate_config(
         );
     }
 
+    validate_arguments(&config.scan_options)?;
+
+    Ok(())
+}
+
+fn validate_arguments(
+    arguments: &[String],
+) -> Result<(), String> {
+    for argument in arguments {
+        if argument.contains('\0') {
+            return Err(
+                "Scan arguments cannot contain null characters."
+                    .to_string(),
+            );
+        }
+    }
+
     Ok(())
 }
 
 fn build_arguments(
     config: &ScanConfig,
+    tool: &registry::ToolDefinition,
 ) -> Result<Vec<String>, String> {
-    match config.tool_id.as_str() {
-        "nmap" => build_nmap_arguments(config),
+    let mut args = config
+        .scan_options
+        .iter()
+        .map(|argument| argument.trim().to_string())
+        .filter(|argument| !argument.is_empty())
+        .collect::<Vec<_>>();
 
-        _ => Err(format!(
-            "Scan execution for tool '{}' is not implemented yet.",
-            config.tool_id
-        )),
+    match tool.target_strategy {
+        TargetStrategy::Append => {
+            args.push(config.target.trim().to_string());
+        }
+
+        TargetStrategy::Flag(flag) => {
+            args.push(flag.to_string());
+            args.push(config.target.trim().to_string());
+        }
     }
-}
-
-fn build_nmap_arguments(
-    config: &ScanConfig,
-) -> Result<Vec<String>, String> {
-    if !matches!(
-        config.target_type,
-        ScanType::Network
-    ) {
-        return Err(
-            "Nmap scans currently require the Network scan type."
-                .to_string()
-        );
-    }
-
-    let mut args = Vec::new();
-
-    /*
-     * Conservative default for our first scan engine.
-     *
-     * -sV asks Nmap to identify services and versions.
-     */
-    args.push("-sV".to_string());
-
-    /*
-     * Additional scan options can be introduced here
-     * later through structured configuration.
-     *
-     * We intentionally do NOT accept arbitrary executable
-     * arguments from the frontend at this layer.
-     */
-
-    args.push(config.target.trim().to_string());
 
     Ok(args)
 }
