@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -15,11 +16,23 @@ import {
 } from "lucide-react";
 
 import { tools } from "../data/tools";
-import type { ToolCategory, ToolStatus } from "../types/tool";
+import type {
+  ToolCategory,
+  ToolStatus,
+} from "../types/tool";
 
 import "../styles/tools.css";
 
-const categories: Array<"All categories" | ToolCategory> = [
+interface ToolDetectionResult {
+  tool_id: string;
+  installed: boolean;
+  executable: string | null;
+  version: string | null;
+}
+
+const categories: Array<
+  "All categories" | ToolCategory
+> = [
   "All categories",
   "Network",
   "Web",
@@ -31,14 +44,20 @@ const categories: Array<"All categories" | ToolCategory> = [
   "Utility",
 ];
 
-const statuses: Array<"All statuses" | ToolStatus> = [
+const statuses: Array<
+  "All statuses" | ToolStatus
+> = [
   "All statuses",
   "Installed",
   "Not Installed",
   "Unknown",
 ];
 
-function ToolIcon({ category }: { category: ToolCategory }) {
+function ToolIcon({
+  category,
+}: {
+  category: ToolCategory;
+}) {
   if (category === "Network") {
     return <Network size={18} />;
   }
@@ -92,6 +111,11 @@ function ToolStatus({
 export default function Tools() {
   const navigate = useNavigate();
 
+  const [detectionResults, setDetectionResults] =
+    useState<Record<string, ToolDetectionResult>>({});
+
+  const [isDetecting, setIsDetecting] = useState(true);
+
   const [search, setSearch] = useState("");
 
   const [category, setCategory] =
@@ -104,15 +128,71 @@ export default function Tools() {
       "All statuses",
     );
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function detectTools() {
+      try {
+        setIsDetecting(true);
+
+        const results =
+          await invoke<ToolDetectionResult[]>(
+            "detect_tools",
+          );
+
+        if (cancelled) {
+          return;
+        }
+
+        const resultMap = Object.fromEntries(
+          results.map((result) => [
+            result.tool_id,
+            result,
+          ]),
+        );
+
+        setDetectionResults(resultMap);
+      } catch (error) {
+        console.error(
+          "Failed to detect security tools:",
+          error,
+        );
+      } finally {
+        if (!cancelled) {
+          setIsDetecting(false);
+        }
+      }
+    }
+
+    detectTools();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const filteredTools = useMemo(() => {
     const query = search.trim().toLowerCase();
 
     return tools.filter((tool) => {
+      const detection = detectionResults[tool.id];
+
+      const actualStatus: ToolStatus =
+        detection?.installed
+          ? "Installed"
+          : isDetecting
+            ? "Unknown"
+            : "Not Installed";
+
       const matchesSearch =
         !query ||
         tool.name.toLowerCase().includes(query) ||
-        tool.description.toLowerCase().includes(query) ||
-        tool.command.toLowerCase().includes(query);
+        tool.description
+          .toLowerCase()
+          .includes(query) ||
+        tool.command
+          .toLowerCase()
+          .includes(query);
 
       const matchesCategory =
         category === "All categories" ||
@@ -120,7 +200,7 @@ export default function Tools() {
 
       const matchesStatus =
         status === "All statuses" ||
-        tool.status === status;
+        actualStatus === status;
 
       return (
         matchesSearch &&
@@ -128,7 +208,17 @@ export default function Tools() {
         matchesStatus
       );
     });
-  }, [search, category, status]);
+  }, [
+    search,
+    category,
+    status,
+    detectionResults,
+    isDetecting,
+  ]);
+
+  const installedCount = Object.values(
+    detectionResults,
+  ).filter((result) => result.installed).length;
 
   return (
     <div className="page tools-page">
@@ -137,13 +227,14 @@ export default function Tools() {
           <h1>Tools</h1>
 
           <p>
-            Manage and access the security tools available to
-            Heimdall.
+            Manage and access the security tools available
+            to Heimdall.
           </p>
         </div>
       </div>
 
       <section className="card tools-card">
+        {/* Toolbar */}
         <div className="tools-toolbar">
           <div className="tools-search">
             <Search
@@ -175,7 +266,10 @@ export default function Tools() {
               aria-label="Filter by category"
             >
               {categories.map((item) => (
-                <option key={item} value={item}>
+                <option
+                  key={item}
+                  value={item}
+                >
                   {item}
                 </option>
               ))}
@@ -193,7 +287,10 @@ export default function Tools() {
               aria-label="Filter by status"
             >
               {statuses.map((item) => (
-                <option key={item} value={item}>
+                <option
+                  key={item}
+                  value={item}
+                >
                   {item}
                 </option>
               ))}
@@ -201,6 +298,7 @@ export default function Tools() {
           </div>
         </div>
 
+        {/* Summary */}
         <div className="tools-summary">
           <span>
             {filteredTools.length}{" "}
@@ -210,65 +308,90 @@ export default function Tools() {
           </span>
 
           <span>
-            {
-              tools.filter(
-                (tool) => tool.status === "Installed",
-              ).length
-            }{" "}
-            installed
+            {installedCount} installed
           </span>
         </div>
 
+        {/* Tool Grid */}
         <div className="tools-grid">
-          {filteredTools.map((tool) => (
-            <article
-              key={tool.id}
-              className="tool-card"
-            >
-              <div className="tool-card-header">
-                <div className="tool-icon">
-                  <ToolIcon category={tool.category} />
+          {filteredTools.map((tool) => {
+            const detection =
+              detectionResults[tool.id];
+
+            const actualStatus: ToolStatus =
+              detection?.installed
+                ? "Installed"
+                : isDetecting
+                  ? "Unknown"
+                  : "Not Installed";
+
+            return (
+              <article
+                key={tool.id}
+                className="tool-card"
+              >
+                {/* Card Header */}
+                <div className="tool-card-header">
+                  <div className="tool-icon">
+                    <ToolIcon
+                      category={tool.category}
+                    />
+                  </div>
+
+                  <ToolStatus
+                    status={actualStatus}
+                  />
                 </div>
 
-                <ToolStatus status={tool.status} />
-              </div>
+                {/* Card Body */}
+                <div className="tool-card-body">
+                  <div className="tool-title-row">
+                    <h2>{tool.name}</h2>
 
-              <div className="tool-card-body">
-                <div className="tool-title-row">
-                  <h2>{tool.name}</h2>
+                    <span className="tool-category">
+                      {tool.category}
+                    </span>
+                  </div>
 
-                  <span className="tool-category">
-                    {tool.category}
-                  </span>
+                  <p>{tool.description}</p>
                 </div>
 
-                <p>{tool.description}</p>
-              </div>
+                {/* Card Footer */}
+                <div className="tool-card-footer">
+                  <div className="tool-command">
+                    <Terminal size={13} />
 
-              <div className="tool-card-footer">
-                <div className="tool-command">
-                  <Terminal size={13} />
-                  <code>{tool.command}</code>
+                    <code>{tool.command}</code>
 
-                  {tool.version && (
-                    <span>{tool.version}</span>
-                  )}
+                    {detection?.version ? (
+                      <span>
+                        {detection.version}
+                      </span>
+                    ) : tool.version ? (
+                      <span>
+                        {tool.version}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <button
+                    className="tool-open-button"
+                    aria-label={`Open ${tool.name}`}
+                    onClick={() =>
+                      navigate(
+                        `/tools/${tool.id}`,
+                      )
+                    }
+                  >
+                    <ArrowRight size={16} />
+                  </button>
                 </div>
-
-                <button
-                  className="tool-open-button"
-                  aria-label={`Open ${tool.name}`}
-                  onClick={() =>
-                    navigate(`/tools/${tool.id}`)
-                  }
-                >
-                  <ArrowRight size={16} />
-                </button>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
 
+        {/* Empty State */}
         {filteredTools.length === 0 && (
           <div className="tools-empty-state">
             <div className="tools-empty-icon">
