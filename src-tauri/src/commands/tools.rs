@@ -37,6 +37,65 @@ pub async fn detect_tools() -> Vec<ToolDetectionResult> {
         .collect()
 }
 
+#[tauri::command]
+pub async fn discover_tool(
+    tool_id: String,
+) -> Result<crate::tools::intelligence::ToolIntelligence, String> {
+    let tool = registry::get_tool(&tool_id)
+        .ok_or_else(|| {
+            format!(
+                "Tool '{}' is not registered with Heimdall.",
+                tool_id
+            )
+        })?;
+
+    let detected = detector::detect(tool);
+
+    if !detected.installed {
+        return Err(format!(
+            "Tool '{}' is not installed or could not be detected.",
+            tool.name
+        ));
+    }
+
+    let executable = detected
+        .executable
+        .ok_or_else(|| {
+            format!(
+                "Executable for '{}' could not be resolved.",
+                tool.name
+            )
+        })?;
+
+    let tool_id_for_task = tool.id.to_string();
+    let tool_name = tool.name.to_string();
+
+    tauri::async_runtime::spawn_blocking(
+        move || {
+            let discovery =
+                crate::tools::discovery::discover(&executable)?;
+
+            Ok::<
+                crate::tools::intelligence::ToolIntelligence,
+                String,
+            >(
+                crate::tools::intelligence::build(
+                    &tool_id_for_task,
+                    &tool_name,
+                    discovery,
+                )
+            )
+        },
+    )
+    .await
+    .map_err(|error| {
+        format!(
+            "Tool intelligence task failed: {}",
+            error
+        )
+    })?
+}
+
 #[derive(Debug, Serialize)]
 pub struct ToolInstallationResult {
     pub tool_id: String,

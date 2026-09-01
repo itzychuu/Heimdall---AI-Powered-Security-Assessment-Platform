@@ -1,3 +1,10 @@
+pub mod action;
 pub mod detector;
+pub mod discovery;
 pub mod installer;
+pub mod intelligence;
+pub mod knowledge;
+pub mod profile;
+pub mod profiles;
 pub mod registry;
+pub mod knowledge_builder;
