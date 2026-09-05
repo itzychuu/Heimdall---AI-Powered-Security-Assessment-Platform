@@ -10,6 +10,7 @@ pub struct OllamaRequest {
     pub model: String,
     pub prompt: String,
     pub stream: bool,
+    pub format: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -35,6 +36,7 @@ impl OllamaClient {
             model: model.to_string(),
             prompt: prompt.to_string(),
             stream: false,
+            format: "json".to_string(),
         };
 
         let url = format!(
