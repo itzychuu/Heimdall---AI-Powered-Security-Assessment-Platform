@@ -8,3 +8,4 @@ pub mod profile;
 pub mod profiles;
 pub mod registry;
 pub mod knowledge_builder;
+pub mod action_builder;

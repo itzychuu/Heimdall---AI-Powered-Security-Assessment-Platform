@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::agent::context::AgentContext;
 use crate::agent::models::{
+    AgentAction,
+    AgentActionInput,
     AssessmentPlan,
     AssessmentRequest,
     AssessmentTarget,
@@ -9,6 +11,16 @@ use crate::agent::models::{
 };
 use crate::agent::planner;
 use crate::agent::runtime::AgentRuntime;
+
+use crate::scans::models::{
+    ScanConfig,
+    ScanResult,
+    ScanType,
+};
+use crate::scans::runner;
+
+use crate::tools::action_builder;
+use crate::tools::action::ToolAction;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct AgentReasonRequest {
@@ -20,6 +32,15 @@ pub struct AgentReasonResponse {
     pub model: String,
     pub response: String,
     pub plan: Option<AssessmentPlan>,
+    pub action_arguments: Vec<Vec<String>>,
+    pub actions: Vec<ToolAction>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct AgentExecuteRequest {
+    pub action: ToolAction,
+    pub name: String,
+    pub project: String,
 }
 
 #[tauri::command]
@@ -30,8 +51,7 @@ pub async fn agent_reason(
 
     if prompt.is_empty() {
         return Err(
-            "Agent prompt cannot be empty."
-                .to_string(),
+            "Agent prompt cannot be empty.".to_string()
         );
     }
 
@@ -61,13 +81,122 @@ pub async fn agent_reason(
     let plan = planner::create_plan(
         &assessment_request,
         &response,
+        &context,
     )?;
+
+    let actions = plan
+        .actions
+        .iter()
+        .map(action_builder::build_action)
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let action_arguments = actions
+        .iter()
+        .map(action_builder::build_arguments)
+        .collect::<Result<Vec<_>, _>>()?;
 
     Ok(AgentReasonResponse {
         model: runtime.model().to_string(),
         response,
         plan: Some(plan),
+        action_arguments,
+        actions,
     })
+}
+
+#[tauri::command]
+pub async fn agent_execute(
+    request: AgentExecuteRequest,
+) -> Result<ScanResult, String> {
+    if request.name.trim().is_empty() {
+        return Err(
+            "Assessment name cannot be empty.".to_string()
+        );
+    }
+
+    if request.project.trim().is_empty() {
+        return Err(
+            "Assessment project cannot be empty.".to_string()
+        );
+    }
+
+    let action = request.action;
+
+    let rebuilt_action = action_builder::build_action(
+        &AgentAction {
+            action_id: "approved-action".to_string(),
+            tool_id: action.tool_id.clone(),
+            reason: "Approved by user.".to_string(),
+            target: action.target.clone(),
+            inputs: action
+                .inputs
+                .iter()
+                .map(|input| AgentActionInput {
+                    name: input.name.clone(),
+                    value: input.value.clone(),
+                })
+                .collect(),
+        },
+    )?;
+
+    let arguments =
+        action_builder::build_arguments(
+            &rebuilt_action,
+        )?;
+
+    let target = rebuilt_action
+        .target
+        .clone()
+        .ok_or_else(|| {
+            "Approved action requires a target.".to_string()
+        })?;
+
+    let target_type =
+        infer_scan_type(&rebuilt_action.tool_id);
+
+    let scan_options = arguments
+        .into_iter()
+        .filter(|argument| argument != &target)
+        .collect::<Vec<_>>();
+
+    let config = ScanConfig {
+        name: request.name,
+        target,
+        target_type,
+        project: request.project,
+        tool_id: rebuilt_action.tool_id,
+        scan_options,
+    };
+
+    let result =
+        tauri::async_runtime::spawn_blocking(
+            move || runner::run(&config),
+        )
+        .await
+        .map_err(|error| {
+            format!(
+                "Agent execution task failed: {}",
+                error
+            )
+        })??;
+
+    Ok(result)
+}
+
+fn infer_scan_type(
+    tool_id: &str,
+) -> ScanType {
+    match tool_id {
+        "nmap" => ScanType::Network,
+
+        "ffuf" => ScanType::WebApplication,
+
+        "nikto" => ScanType::WebApplication,
+
+        "nuclei" => ScanType::WebApplication,
+
+        _ => ScanType::Network,
+    }
 }
 
 fn build_agent_prompt(
