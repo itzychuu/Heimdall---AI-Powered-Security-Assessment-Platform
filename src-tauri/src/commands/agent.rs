@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use crate::agent::context::AgentContext;
 use crate::agent::models::{
     AssessmentPlan,
     AssessmentRequest,
@@ -39,7 +40,11 @@ pub async fn agent_reason(
         "qwen3:4b-instruct",
     );
 
-    let agent_prompt = build_agent_prompt(prompt);
+    let context =
+        AgentContext::discover_installed_tools();
+
+    let agent_prompt =
+        build_agent_prompt(prompt, &context);
 
     let response = runtime
         .reason(&agent_prompt)
@@ -67,7 +72,14 @@ pub async fn agent_reason(
 
 fn build_agent_prompt(
     user_prompt: &str,
+    context: &AgentContext,
 ) -> String {
+    let tool_context =
+        serde_json::to_string_pretty(context)
+            .unwrap_or_else(|_| {
+                "{\"tools\":[]}".to_string()
+            });
+
     format!(
         r#"
 You are the planning component of Heimdall,
@@ -104,21 +116,29 @@ The JSON must follow this exact structure:
 Rules:
 
 1. action_id must uniquely identify the action.
-2. tool_id must contain the identifier of a security tool.
-3. reason must explain why the tool is appropriate.
+2. tool_id MUST refer to a tool present in the Heimdall tool context.
+3. reason must explain why the selected tool is appropriate.
 4. target may contain the target supplied by the user.
-5. inputs contain tool-specific parameters.
-6. Never invent shell commands.
-7. Never return executable command strings.
-8. Never assume authorization that was not supplied by Heimdall.
-9. You are proposing actions only. Heimdall will validate them before execution.
-10. If the request does not contain enough information for a safe assessment plan,
+5. inputs MUST use input names supported by the selected tool.
+6. Do not invent tool capabilities.
+7. Do not invent tool inputs.
+8. Never invent shell commands.
+9. Never return executable command strings.
+10. Never assume authorization that was not supplied by Heimdall.
+11. You are proposing actions only. Heimdall will validate them before execution.
+12. If the request does not contain enough information for a safe assessment plan,
     return an empty actions array.
+13. If no installed tool is appropriate, return an empty actions array.
+
+Heimdall tool context:
+
+{}
 
 User assessment request:
 
 {}
 "#,
+        tool_context,
         user_prompt
     )
 }

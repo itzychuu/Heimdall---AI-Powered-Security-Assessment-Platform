@@ -9,7 +9,33 @@ import {
   Terminal,
 } from "lucide-react";
 
+import { invoke } from "@tauri-apps/api/core";
+
 import "../styles/ai-assistant.css";
+
+interface AgentActionInput {
+  name: string;
+  value: string;
+}
+
+interface AgentAction {
+  action_id: string;
+  tool_id: string;
+  reason: string;
+  target: string | null;
+  inputs: AgentActionInput[];
+}
+
+interface AssessmentPlan {
+  objective: string;
+  actions: AgentAction[];
+}
+
+interface AgentReasonResponse {
+  model: string;
+  response: string;
+  plan: AssessmentPlan | null;
+}
 
 const suggestions = [
   {
@@ -31,16 +57,47 @@ const suggestions = [
 
 export default function AIAssistant() {
   const [message, setMessage] = useState("");
+  const [response, setResponse] = useState("");
+  const [plan, setPlan] = useState<AssessmentPlan | null>(null);
+  const [model, setModel] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(
+    event: React.FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
 
-    if (!message.trim()) {
+    const prompt = message.trim();
+
+    if (!prompt || loading) {
       return;
     }
 
-    // AI functionality will be connected later.
-    setMessage("");
+    setLoading(true);
+    setError("");
+    setResponse("");
+    setPlan(null);
+
+    try {
+      const result = await invoke<AgentReasonResponse>(
+        "agent_reason",
+        {
+          request: {
+            prompt,
+          },
+        },
+      );
+
+      setModel(result.model);
+      setResponse(result.response);
+      setPlan(result.plan);
+      setMessage("");
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -56,18 +113,114 @@ export default function AIAssistant() {
       </div>
 
       <section className="card ai-workspace">
-        <div className="ai-empty-state">
-          <div className="ai-avatar">
-            <Sparkles size={25} />
+        {!response && !error && !loading && (
+          <div className="ai-empty-state">
+            <div className="ai-avatar">
+              <Sparkles size={25} />
+            </div>
+
+            <h2>How can Heimdall help?</h2>
+
+            <p>
+              Ask questions about your security assessments,
+              findings, scans, or security tools.
+            </p>
           </div>
+        )}
 
-          <h2>How can Heimdall help?</h2>
+        {loading && (
+          <div className="ai-empty-state">
+            <div className="ai-avatar">
+              <Sparkles size={25} />
+            </div>
 
-          <p>
-            Ask questions about your security assessments,
-            findings, scans, or security tools.
-          </p>
-        </div>
+            <h2>Heimdall is thinking...</h2>
+
+            <p>
+              Analyzing the request and preparing an assessment plan.
+            </p>
+          </div>
+        )}
+
+        {response && (
+          <div className="ai-response">
+            <div className="ai-avatar">
+              <Bot size={22} />
+            </div>
+
+            <h2>Assessment Response</h2>
+
+            {model && (
+              <p>
+                Model: <strong>{model}</strong>
+              </p>
+            )}
+
+            <pre>{response}</pre>
+
+            {plan && (
+              <div className="ai-plan">
+                <h3>Proposed Assessment Plan</h3>
+
+                <p>
+                  <strong>Objective:</strong>{" "}
+                  {plan.objective}
+                </p>
+
+                {plan.actions.length === 0 ? (
+                  <p>
+                    No actions were proposed for this request.
+                  </p>
+                ) : (
+                  plan.actions.map((action) => (
+                    <div
+                      key={action.action_id}
+                      className="ai-action"
+                    >
+                      <strong>
+                        {action.action_id}
+                      </strong>
+
+                      <span>
+                        Tool: {action.tool_id}
+                      </span>
+
+                      <span>
+                        Reason: {action.reason}
+                      </span>
+
+                      {action.target && (
+                        <span>
+                          Target: {action.target}
+                        </span>
+                      )}
+
+                      {action.inputs.length > 0 && (
+                        <div>
+                          <strong>Inputs:</strong>
+
+                          {action.inputs.map((input) => (
+                            <div key={input.name}>
+                              {input.name}: {input.value}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {error && (
+          <div className="ai-error">
+            <h2>Agent Error</h2>
+
+            <p>{error}</p>
+          </div>
+        )}
 
         <div className="ai-suggestions">
           {suggestions.map((suggestion) => {
@@ -81,6 +234,7 @@ export default function AIAssistant() {
                 onClick={() =>
                   setMessage(suggestion.title)
                 }
+                disabled={loading}
               >
                 <div className="ai-suggestion-icon">
                   <Icon size={18} />
@@ -110,7 +264,7 @@ export default function AIAssistant() {
           </div>
 
           <span className="ai-status-text">
-            Ready
+            {loading ? "Thinking..." : "Ready"}
           </span>
         </div>
 
@@ -130,13 +284,14 @@ export default function AIAssistant() {
             }
             placeholder="Ask Heimdall anything..."
             aria-label="Ask Heimdall anything"
+            disabled={loading}
           />
 
           <button
             type="submit"
             className="ai-send-button"
             aria-label="Send message"
-            disabled={!message.trim()}
+            disabled={!message.trim() || loading}
           >
             <Send size={17} />
           </button>
