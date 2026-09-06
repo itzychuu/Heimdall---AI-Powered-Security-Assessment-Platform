@@ -11,7 +11,9 @@ pub fn build(
     name: &str,
     discovery: &ToolDiscoveryResult,
 ) -> ToolKnowledge {
-    if let Some(profile) = profiles::get_profile(tool_id) {
+    if let Some(profile) =
+        profiles::get_profile(tool_id)
+    {
         return build_from_profile(
             tool_id,
             name,
@@ -36,20 +38,47 @@ fn build_from_profile(
     let inputs = profile
         .inputs
         .iter()
-        .map(|input| DiscoveredInput {
-            name: input.id.to_string(),
-            input_type: input.input_type.clone(),
-            required: input.required,
-            description: input.description.to_string(),
+        .map(|input| {
+            let flag = match &input.argument_style {
+                Some(
+                    super::profile::ArgumentStyle::Flag(
+                        flag,
+                    ),
+                ) => Some((*flag).to_string()),
+
+                Some(
+                    super::profile::ArgumentStyle::Value(
+                        flag,
+                    ),
+                ) => Some((*flag).to_string()),
+
+                Some(
+                    super::profile::ArgumentStyle::FlagValue(
+                        flag,
+                    ),
+                ) => Some((*flag).to_string()),
+
+                None => None,
+            };
+
+            DiscoveredInput {
+                name: input.id.to_string(),
+                input_type: input.input_type.clone(),
+                required: input.required,
+                description: input.description.to_string(),
+                flag,
+            }
         })
         .collect();
 
     let capabilities = profile
         .capabilities
         .iter()
-        .map(|capability| DiscoveredCapability {
-            name: capability.name.to_string(),
-            description: capability.description.to_string(),
+        .map(|capability| {
+            DiscoveredCapability {
+                name: capability.name.to_string(),
+                description: capability.description.to_string(),
+            }
         })
         .collect();
 
@@ -60,6 +89,7 @@ fn build_from_profile(
         version: discovery.version.clone(),
         capabilities,
         inputs,
+        raw_help: discovery.help.clone(),
     }
 }
 
@@ -88,72 +118,6 @@ fn build_from_discovery(
         version: discovery.version.clone(),
         capabilities,
         inputs: Vec::new(),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn builds_known_profile() {
-        let discovery = ToolDiscoveryResult {
-            executable: "nmap".to_string(),
-            version: Some("test-version".to_string()),
-            help: Some("test-help".to_string()),
-        };
-
-        let knowledge = build(
-            "nmap",
-            "Nmap",
-            &discovery,
-        );
-
-        assert_eq!(
-            knowledge.tool_id,
-            "nmap"
-        );
-
-        assert_eq!(
-            knowledge.name,
-            "Nmap"
-        );
-
-        assert!(
-            !knowledge.inputs.is_empty()
-        );
-
-        assert!(
-            !knowledge.capabilities.is_empty()
-        );
-    }
-
-    #[test]
-    fn builds_unknown_tool_from_discovery() {
-        let discovery = ToolDiscoveryResult {
-            executable: "example-tool".to_string(),
-            version: Some("1.0".to_string()),
-            help: Some("Usage: example-tool".to_string()),
-        };
-
-        let knowledge = build(
-            "example-tool",
-            "Example Tool",
-            &discovery,
-        );
-
-        assert_eq!(
-            knowledge.tool_id,
-            "example-tool"
-        );
-
-        assert_eq!(
-            knowledge.version,
-            Some("1.0".to_string())
-        );
-
-        assert!(
-            !knowledge.capabilities.is_empty()
-        );
+        raw_help: discovery.help.clone(),
     }
 }

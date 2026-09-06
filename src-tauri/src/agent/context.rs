@@ -16,6 +16,7 @@ pub struct AgentToolContext {
     pub version: Option<String>,
     pub capabilities: Vec<DiscoveredCapability>,
     pub inputs: Vec<DiscoveredInput>,
+    pub raw_help: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -35,6 +36,7 @@ impl AgentContext {
                 version: tool.version,
                 capabilities: tool.capabilities,
                 inputs: tool.inputs,
+                raw_help: tool.raw_help,
             })
             .collect();
 
@@ -92,17 +94,26 @@ mod tests {
             capabilities: vec![
                 DiscoveredCapability {
                     name: "test-capability".to_string(),
-                    description: "Test capability.".to_string(),
+                    description:
+                        "Test capability."
+                            .to_string(),
                 },
             ],
             inputs: vec![
                 DiscoveredInput {
                     name: "target".to_string(),
-                    input_type: crate::tools::profile::InputType::Target,
+                    input_type:
+                        crate::tools::profile::InputType::Target,
                     required: true,
-                    description: "Test target.".to_string(),
+                    description:
+                        "Test target."
+                            .to_string(),
+                    flag: None,
                 },
             ],
+            raw_help: Some(
+                "test-tool --help".to_string(),
+            ),
         };
 
         let context =

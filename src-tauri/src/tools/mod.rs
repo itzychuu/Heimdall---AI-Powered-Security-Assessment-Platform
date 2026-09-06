@@ -7,5 +7,6 @@ pub mod knowledge;
 pub mod profile;
 pub mod profiles;
 pub mod registry;
+pub mod help_parser;
 pub mod knowledge_builder;
 pub mod action_builder;

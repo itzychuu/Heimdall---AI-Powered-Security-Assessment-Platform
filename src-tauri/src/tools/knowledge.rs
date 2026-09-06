@@ -8,6 +8,7 @@ pub struct DiscoveredInput {
     pub input_type: InputType,
     pub required: bool,
     pub description: String,
+    pub flag: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -24,4 +25,5 @@ pub struct ToolKnowledge {
     pub version: Option<String>,
     pub capabilities: Vec<DiscoveredCapability>,
     pub inputs: Vec<DiscoveredInput>,
+    pub raw_help: Option<String>,
 }

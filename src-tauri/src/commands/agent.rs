@@ -18,6 +18,7 @@ use crate::scans::models::{
     ScanType,
 };
 use crate::scans::runner;
+use crate::scans::store;
 
 use crate::tools::action_builder;
 use crate::tools::action::ToolAction;
@@ -106,6 +107,7 @@ pub async fn agent_reason(
 
 #[tauri::command]
 pub async fn agent_execute(
+    app: tauri::AppHandle,
     request: AgentExecuteRequest,
 ) -> Result<ScanResult, String> {
     if request.name.trim().is_empty() {
@@ -179,6 +181,8 @@ pub async fn agent_execute(
                 error
             )
         })??;
+
+    store::save_scan(&app, &result)?;
 
     Ok(result)
 }
