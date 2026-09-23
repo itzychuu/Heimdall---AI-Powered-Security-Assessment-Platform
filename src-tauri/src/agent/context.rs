@@ -83,6 +83,7 @@ impl AgentContext {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tools::knowledge::KnowledgeSource;
 
     #[test]
     fn builds_context_from_tool_knowledge() {
@@ -91,6 +92,8 @@ mod tests {
             name: "Test Tool".to_string(),
             executable: "test-tool".to_string(),
             version: Some("1.0".to_string()),
+            source: KnowledgeSource::ParsedHelp,
+            parsed_options: Vec::new(),
             capabilities: vec![
                 DiscoveredCapability {
                     name: "test-capability".to_string(),

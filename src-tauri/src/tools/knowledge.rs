@@ -1,6 +1,15 @@
 use serde::Serialize;
 
+use super::help_parser::ParsedCliOption;
 use super::profile::InputType;
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub enum KnowledgeSource {
+    BuiltInProfile,
+    ExecutableDiscovery,
+    ParsedHelp,
+    AiInterpretation,
+}
 
 #[derive(Debug, Clone, Serialize)]
 pub struct DiscoveredInput {
@@ -23,6 +32,8 @@ pub struct ToolKnowledge {
     pub name: String,
     pub executable: String,
     pub version: Option<String>,
+    pub source: KnowledgeSource,
+    pub parsed_options: Vec<ParsedCliOption>,
     pub capabilities: Vec<DiscoveredCapability>,
     pub inputs: Vec<DiscoveredInput>,
     pub raw_help: Option<String>,
