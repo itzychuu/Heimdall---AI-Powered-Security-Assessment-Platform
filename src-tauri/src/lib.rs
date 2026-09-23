@@ -19,6 +19,7 @@ pub fn run() {
             commands::scans::list_scans,
             commands::agent::agent_reason,
             commands::agent::agent_execute,
+            commands::agent::run_assessment_loop,
             commands::analysis::analyze_project
         ])
         .run(tauri::generate_context!())

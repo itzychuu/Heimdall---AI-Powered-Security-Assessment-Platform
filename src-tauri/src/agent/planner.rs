@@ -1,7 +1,7 @@
 use serde_json::from_str;
 
 use super::context::AgentContext;
-use super::models::{AssessmentPlan, AssessmentRequest};
+use super::models::{AgentAction, AssessmentPlan, AssessmentRequest, AssessmentScope};
 
 pub fn create_plan(
     request: &AssessmentRequest,
@@ -17,7 +17,8 @@ pub fn create_plan(
             format!("Failed to deserialize Agent plan: {}", error)
         })?;
 
-    validate_plan(&plan, context)?;
+    let scope = AssessmentScope::new(&request.target.value);
+    validate_plan_with_scope(&plan, context, &scope)?;
 
     Ok(plan)
 }
@@ -70,67 +71,117 @@ pub fn validate_plan(
     plan: &AssessmentPlan,
     context: &AgentContext,
 ) -> Result<(), String> {
+    let dummy_scope = AssessmentScope::new("");
+    validate_plan_internal(plan, context, Some(&dummy_scope), false)
+}
+
+pub fn validate_plan_with_scope(
+    plan: &AssessmentPlan,
+    context: &AgentContext,
+    scope: &AssessmentScope,
+) -> Result<(), String> {
+    validate_plan_internal(plan, context, Some(scope), true)
+}
+
+fn validate_plan_internal(
+    plan: &AssessmentPlan,
+    context: &AgentContext,
+    scope: Option<&AssessmentScope>,
+    check_scope: bool,
+) -> Result<(), String> {
     if plan.objective.trim().is_empty() {
         return Err("Agent plan objective cannot be empty.".to_string());
     }
 
     for action in &plan.actions {
-        if action.action_id.trim().is_empty() {
-            return Err("Agent action ID cannot be empty.".to_string());
-        }
+        validate_action_internal(action, context, scope, check_scope)?;
+    }
 
-        if action.tool_id.trim().is_empty() {
-            return Err("Agent action tool ID cannot be empty.".to_string());
-        }
+    Ok(())
+}
 
-        if action.reason.trim().is_empty() {
+pub fn validate_action(
+    action: &AgentAction,
+    context: &AgentContext,
+    scope: &AssessmentScope,
+) -> Result<(), String> {
+    validate_action_internal(action, context, Some(scope), true)
+}
+
+fn validate_action_internal(
+    action: &AgentAction,
+    context: &AgentContext,
+    scope: Option<&AssessmentScope>,
+    check_scope: bool,
+) -> Result<(), String> {
+    if action.action_id.trim().is_empty() {
+        return Err("Agent action ID cannot be empty.".to_string());
+    }
+
+    if action.tool_id.trim().is_empty() {
+        return Err("Agent action tool ID cannot be empty.".to_string());
+    }
+
+    if action.reason.trim().is_empty() {
+        return Err(format!(
+            "Agent action '{}' must include a reason.",
+            action.action_id
+        ));
+    }
+
+    let tool = context
+        .tools
+        .iter()
+        .find(|t| t.tool_id == action.tool_id)
+        .ok_or_else(|| {
+            format!(
+                "Agent proposed unknown or unavailable tool '{}'.",
+                action.tool_id
+            )
+        })?;
+
+    if let Some(target) = &action.target {
+        if target.trim().is_empty() {
             return Err(format!(
-                "Agent action '{}' must include a reason.",
+                "Agent action '{}' contains an empty target.",
                 action.action_id
             ));
         }
 
-        let tool = context
-            .tools
-            .iter()
-            .find(|t| t.tool_id == action.tool_id)
-            .ok_or_else(|| {
-                format!(
-                    "Agent proposed unknown or unavailable tool '{}'.",
-                    action.tool_id
-                )
-            })?;
-
-        if let Some(target) = &action.target {
-            if target.trim().is_empty() {
-                return Err(format!(
-                    "Agent action '{}' contains an empty target.",
-                    action.action_id
-                ));
+        if check_scope {
+            if let Some(scope) = scope {
+                if !scope.allowed_target.is_empty() && !scope.is_target_allowed(target) {
+                    return Err(format!(
+                        "Agent action '{}' target '{}' is outside authorized assessment scope '{}'.",
+                        action.action_id,
+                        target,
+                        scope.allowed_target
+                    ));
+                }
             }
         }
+    }
 
-        for input in &action.inputs {
-            if input.name.trim().is_empty() {
-                return Err(format!(
-                    "Agent action '{}' contains an input with an empty name.",
-                    action.action_id
-                ));
-            }
+    for input in &action.inputs {
+        if input.name.trim().is_empty() {
+            return Err(format!(
+                "Agent action '{}' contains an input with an empty name.",
+                action.action_id
+            ));
+        }
 
-            let supported = tool
-                .inputs
-                .iter()
-                .any(|known_input| known_input.name == input.name || known_input.flag.as_deref() == Some(&input.name));
+        let supported = tool
+            .inputs
+            .iter()
+            .any(|known_input| known_input.name == input.name || known_input.flag.as_deref() == Some(&input.name));
 
-            if !supported {
-                return Err(format!(
-                    "Agent action '{}' uses unsupported input '{}' for tool '{}'.",
-                    action.action_id,
-                    input.name,
-                    action.tool_id
-                ));
-            }
+        if !supported {
+            return Err(format!(
+                "Agent action '{}' uses unsupported input '{}' for tool '{}'.",
+                action.action_id,
+                input.name,
+                action.tool_id
+            ));
         }
     }
 
@@ -250,5 +301,24 @@ mod tests {
 
         let err = validate_plan(&plan, &ctx).unwrap_err();
         assert!(err.contains("unsupported input"));
+    }
+
+    #[test]
+    fn test_validate_plan_out_of_scope_target_rejected() {
+        let ctx = mock_context();
+        let scope = AssessmentScope::new("127.0.0.1");
+        let plan = AssessmentPlan {
+            objective: "Out of scope scan".to_string(),
+            actions: vec![AgentAction {
+                action_id: "a1".to_string(),
+                tool_id: "nmap".to_string(),
+                reason: "Recon".to_string(),
+                target: Some("192.168.1.1".to_string()),
+                inputs: vec![],
+            }],
+        };
+
+        let err = validate_plan_with_scope(&plan, &ctx, &scope).unwrap_err();
+        assert!(err.contains("outside authorized assessment scope"));
     }
 }

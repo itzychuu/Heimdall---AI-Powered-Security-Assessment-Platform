@@ -1,11 +1,13 @@
 use serde::{Deserialize, Serialize};
 
 use crate::agent::context::AgentContext;
+use crate::agent::loop_runner::{AssessmentLoop, AssessmentLoopOptions};
 use crate::agent::models::{
     AgentAction,
     AgentActionInput,
     AssessmentPlan,
     AssessmentRequest,
+    AssessmentState,
     AssessmentTarget,
     AssessmentTargetType,
 };
@@ -42,6 +44,44 @@ pub struct AgentExecuteRequest {
     pub action: ToolAction,
     pub name: String,
     pub project: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct RunAssessmentLoopRequest {
+    pub target: String,
+    pub objective: String,
+    pub max_iterations: Option<usize>,
+}
+
+#[tauri::command]
+pub async fn run_assessment_loop(
+    request: RunAssessmentLoopRequest,
+) -> Result<AssessmentState, String> {
+    if request.target.trim().is_empty() {
+        return Err("Assessment target cannot be empty.".to_string());
+    }
+
+    if request.objective.trim().is_empty() {
+        return Err("Assessment objective cannot be empty.".to_string());
+    }
+
+    let loop_options = AssessmentLoopOptions {
+        ollama_url: "http://127.0.0.1:11434".to_string(),
+        model: "qwen3:4b-instruct".to_string(),
+        max_iterations: request.max_iterations.unwrap_or(5),
+    };
+
+    let assessment_loop = AssessmentLoop::new(loop_options);
+
+    let assessment_req = AssessmentRequest {
+        target: AssessmentTarget {
+            target_type: AssessmentTargetType::Custom,
+            value: request.target.trim().to_string(),
+        },
+        objective: request.objective.trim().to_string(),
+    };
+
+    assessment_loop.run_loop(assessment_req).await
 }
 
 #[tauri::command]
