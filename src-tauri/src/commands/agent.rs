@@ -88,12 +88,12 @@ pub async fn agent_reason(
     let actions = plan
         .actions
         .iter()
-        .map(action_builder::build_action)
+        .map(|action| action_builder::build_action_with_context(action, Some(&context)))
         .collect::<Result<Vec<_>, _>>()?;
 
     let action_arguments = actions
         .iter()
-        .map(action_builder::build_arguments)
+        .map(|action| action_builder::build_arguments_with_context(action, Some(&context)))
         .collect::<Result<Vec<_>, _>>()?;
 
     Ok(AgentReasonResponse {
@@ -123,8 +123,9 @@ pub async fn agent_execute(
     }
 
     let action = request.action;
+    let context = AgentContext::discover_installed_tools();
 
-    let rebuilt_action = action_builder::build_action(
+    let rebuilt_action = action_builder::build_action_with_context(
         &AgentAction {
             action_id: "approved-action".to_string(),
             tool_id: action.tool_id.clone(),
@@ -139,11 +140,13 @@ pub async fn agent_execute(
                 })
                 .collect(),
         },
+        Some(&context),
     )?;
 
     let arguments =
-        action_builder::build_arguments(
+        action_builder::build_arguments_with_context(
             &rebuilt_action,
+            Some(&context),
         )?;
 
     let target = rebuilt_action
@@ -220,13 +223,16 @@ an authorized security assessment platform.
 
 Your job is to create a structured assessment plan.
 
-You MUST return ONLY valid JSON.
+STRICT RULES:
+1. Reason ONLY from the supplied Heimdall tool context. Do NOT invent tools, input names, or capabilities.
+2. OBJECTIVE ADHERENCE: Adhere strictly to the requested objective scope. Do NOT add unrequested scan types (such as OS detection, scripts, or intrusive probes) unless explicitly requested in the objective.
+3. You MUST return ONLY valid JSON matching the exact schema below.
+4. Do NOT return Markdown code fences or explanations outside the JSON object.
+5. Never return executable command strings (e.g. "nmap -p 80 target"). Return ONLY structured actions.
+6. tool_id MUST refer to a tool present in the Heimdall tool context.
+7. inputs MUST use input names (or flag names) present in the selected tool's input list.
 
-Do not return Markdown.
-Do not return code fences.
-Do not return explanations outside the JSON object.
-
-The JSON must follow this exact structure:
+Schema:
 
 {{
   "objective": "string",
